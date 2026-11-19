@@ -499,7 +499,7 @@ function renderAll(force){
   ({ 'tiep-don':rTiepDon, 'kham-benh':rKham, 'soan-thuoc':rSoan, 'trong-ngay':rTrongNgay, 'benh-nhan':rBenhNhan, 'thuoc':rThuoc, 'thong-ke':rThongKe, 'cai-dat':rCaiDat })[S.route]();
 }
 function softUpdate(){ // refresh only list parts while the user is typing
-  if (S.route === 'tiep-don'){ const el = $('#tdList'); if (el) el.innerHTML = tdListHTML(); bindTdList(); }
+  if (S.route === 'tiep-don'){ const el = $('#tdList'); if (el) el.innerHTML = tdListHTML(); bindTdList(); const rf = $('#tdRef'); if (rf){ rf.innerHTML = sttRefHTML(); bindSttRef(); } }
   if (S.route === 'kham-benh'){ const el = $('#khQueue'); if (el){ el.innerHTML = khQueueHTML(); bindKhQueue(); } }
 }
 
@@ -533,6 +533,10 @@ function rTiepDon(){
       <div class="f2"><div class="field"><label>Tiền sử</label><input type="text" id="tdF-tienSu" value="${esc(p?.tienSu)}"></div>
       <div class="field"><label>Dị ứng</label><input type="text" id="tdF-diUng" value="${esc(p?.diUng)}"></div></div>
       <div class="sm bad" id="tdErr"></div>
+      <div class="row" style="align-items:flex-end;gap:12px;margin-top:4px">
+        <div class="field" style="margin:0;width:120px"><label for="tdF-stt">Số thứ tự *</label><input type="text" id="tdF-stt" inputmode="numeric" autocomplete="off" style="font-size:22px;font-weight:700;text-align:center;min-height:46px"></div>
+        <div id="tdRef" class="grow" style="padding-bottom:4px">${sttRefHTML()}</div>
+      </div>
       <div class="actions"><button class="btn primary big" id="tdGo" style="width:100%">Phát số</button></div>
     </div>
     <div class="card">
@@ -550,8 +554,19 @@ function rTiepDon(){
   const cl = $('#tdClear'); if (cl) cl.onclick = () => { S.pickPat = null; rTiepDon(); $('#tdF-ten').focus(); };
   $$('#tdSeg button').forEach(b => { b.classList.toggle('on', b.dataset.v === S.tdFilter); b.onclick = () => { S.tdFilter = b.dataset.v; $('#tdList').innerHTML = tdListHTML(); bindTdList(); $$('#tdSeg button').forEach(x => x.classList.toggle('on', x.dataset.v===S.tdFilter)); }; });
   $('#tdGo').onclick = phatSo;
+  bindSttRef();
+  $('#tdF-stt').onkeydown = e => { if (e.key === 'Enter') phatSo(); };
   bindTdList();
 }
+function sttRefHTML(){
+  if (!S.visits.length) return '<div class="sm">Chưa phát số nào trong ngày.</div>';
+  const last = S.visits.slice().sort((a,b) => String(b.gioDen||'').localeCompare(String(a.gioDen||'')))[0];
+  const mx = Math.max(...S.visits.map(v => +v.stt||0));
+  return `<div style="font-size:13.5px">Số vừa phát: <b class="num" style="font-size:16px">${pad(last.stt,3)}</b> <span class="sm">${esc(last.ten)} · ${hhmm(last.gioDen)}</span></div>
+    ${mx !== +last.stt ? `<div class="sm">Số lớn nhất trong ngày: <b class="num">${pad(mx,3)}</b></div>` : ''}
+    <button type="button" class="btn sm" id="tdUseNext" data-n="${mx+1}" style="margin-top:4px">Dùng số ${pad(mx+1,3)}</button>`;
+}
+function bindSttRef(){ const b = $('#tdUseNext'); if (b) b.onclick = () => { $('#tdF-stt').value = pad(b.dataset.n,3); $('#tdF-stt').focus(); }; }
 function tdListHTML(){
   const list = S.visits.filter(v => S.tdFilter==='all' || v.trangThai===S.tdFilter || (S.tdFilter==='cho-kham' && v.trangThai==='dang-kham'));
   if (!S.dayLoaded && S.db && !S.db._local) return '<div class="empty">Đang tải…</div>';
@@ -569,6 +584,10 @@ async function phatSo(){
   const g = k => ($('#tdF-'+k)?.value || '').trim();
   const info = {}; PFIELDS.forEach(([k]) => info[k] = g(k));
   if (!info.ten){ $('#tdErr').textContent = 'Vui lòng nhập họ tên.'; $('#tdF-ten').focus(); return; }
+  const stt = parseInt(String($('#tdF-stt')?.value || '').replace(/\D/g,''), 10);
+  if (!stt || stt < 1){ $('#tdErr').textContent = 'Vui lòng nhập số thứ tự.'; $('#tdF-stt').focus(); return; }
+  const dup = S.visits.find(v => +v.stt === stt);
+  if (dup && !(await confirmBox('Trùng số thứ tự', `Số ${pad(stt,3)} đã phát cho ${dup.ten} lúc ${hhmm(dup.gioDen)}. Vẫn dùng số này?`, 'Vẫn dùng'))) { $('#tdF-stt').focus(); return; }
   const btn = $('#tdGo'); btn.disabled = true; $('#tdErr').textContent = '';
   try {
     let ma = S.pickPat && S.pickPat.ma;
@@ -577,7 +596,7 @@ async function phatSo(){
     const old = S.patients.get(ma) || {};
     const p = Object.assign({}, old, info, {ma}); delete p._k; if (!p.taoLuc) p.taoLuc = new Date().toISOString();
     await savePatient(p);
-    const stt = await nextSTT(S.day);
+    try { const mx = Math.max(stt, ...S.visits.map(v => +v.stt||0)); await withRetry(()=> S.db.doc(`ngay/${S.day}`).set({ngay: S.day, lastSTT: mx})); } catch(e){ console.warn(e); }
     const v = { id: uid(), ngay: S.day, stt, maBN: ma, ten:p.ten, namSinh:p.namSinh||'', diaChi:p.diaChi||'', dienThoai:p.dienThoai||'', luuY:p.luuY||'', tienSu:p.tienSu||'', diUng:p.diUng||'', trangThai:'cho-kham', gioDen:new Date().toISOString(), bacSi:'', chanDoan:'', ghiChu:'', thuoc:[], tongTien:0 };
     await saveVisit(v);
     S.pickPat = null; rTiepDon(); $('#tdQ').focus();
@@ -589,6 +608,7 @@ function editPatientModal(ma, visit){
   const p = S.patients.get(ma) || (visit ? {ma, ten:visit.ten, namSinh:visit.namSinh, diaChi:visit.diaChi, dienThoai:visit.dienThoai, luuY:visit.luuY, tienSu:visit.tienSu, diUng:visit.diUng} : null);
   if (!p) return;
   const m = openModal(`<h3>Hồ sơ bệnh nhân ${esc(ma)}</h3>
+    ${visit ? `<div class="field" style="max-width:140px"><label>Số thứ tự</label><input type="text" id="epStt" inputmode="numeric" value="${pad(visit.stt,3)}"></div>` : ''}
     ${PFIELDS.map(([k,l]) => `<div class="field"><label>${l}</label><input type="text" data-k="${k}" value="${esc(p[k])}"></div>`).join('')}
     <div class="sm bad" id="epErr"></div>
     <div class="actions"><button class="btn" data-a="no">Hủy</button><button class="btn primary" data-a="ok">Lưu</button></div>`);
@@ -597,6 +617,7 @@ function editPatientModal(ma, visit){
     const np = Object.assign({}, p); $$('[data-k]', m).forEach(i => np[i.dataset.k] = i.value.trim()); delete np._k;
     if (!np.ten){ $('#epErr').textContent = 'Cần họ tên.'; return; }
     try {
+      if (visit && $('#epStt')){ const ns = parseInt($('#epStt').value.replace(/\D/g,''),10); if (!ns){ $('#epErr').textContent = 'Số thứ tự không hợp lệ.'; return; } if (ns !== +visit.stt){ const d = S.visits.find(v => v.id !== visit.id && +v.stt === ns); if (d){ $('#epErr').textContent = `Số ${pad(ns,3)} đang là của ${d.ten}.`; return; } await patchVisit(visit, {stt: ns}); } }
       await savePatient(np);
       // sync today's visits that are not finished
       for (const v of S.visits.filter(x => x.maBN === ma && x.trangThai !== 'xong')){
