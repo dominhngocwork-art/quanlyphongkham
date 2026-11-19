@@ -463,8 +463,20 @@ async function getVisitByRef(ref){
 
 /* ================= routing ================= */
 const ROUTES = ['tiep-don','kham-benh','soan-thuoc','trong-ngay','benh-nhan','thuoc','thong-ke','cai-dat'];
+const TAB_LABELS = {'tiep-don':'Tiếp đón','kham-benh':'Khám bệnh','soan-thuoc':'Soạn thuốc','trong-ngay':'Quản lý trong ngày','benh-nhan':'Bệnh nhân','thuoc':'Danh mục thuốc','thong-ke':'Thống kê','cai-dat':'Cài đặt'};
+const DEFAULT_STAFF_TABS = ['tiep-don','kham-benh','soan-thuoc','benh-nhan'];
+const isAdmin = () => !(S.db && S.db._fire) || (S.me && S.me.quyen === 'admin');
+function staffTabs(me){ return Array.isArray(me && me.tabs) ? me.tabs : DEFAULT_STAFF_TABS; }
+function canTab(r){
+  if (!(S.db && S.db._fire)) return true;
+  if (!S.me) return false;
+  if (S.me.quyen === 'admin') return true;
+  return r !== 'cai-dat' && staffTabs(S.me).includes(r);
+}
 function applyRoute(){
   const h = (location.hash||'').slice(1); S.route = ROUTES.includes(h) ? h : 'tiep-don';
+  $$('#tabs a').forEach(a => { a.hidden = !canTab(a.dataset.r); });
+  if (!canTab(S.route)){ const first = ROUTES.find(canTab); if (first && first !== S.route){ if (h) toast('Bạn không có quyền vào mục “' + TAB_LABELS[S.route] + '”.'); S.route = first; history.replaceState(null, '', '#' + first); } }
   ROUTES.forEach(r => { $('#v-'+r).hidden = r !== S.route; });
   $$('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.r === S.route));
   renderAll(true);
@@ -1074,7 +1086,7 @@ function rCaiDat(){
   <div class="card"><h2>Sao lưu dữ liệu</h2>
     <p class="sm" style="margin-top:-4px">Tải toàn bộ dữ liệu ra một file Excel: bệnh nhân, mọi lượt khám và toa thuốc, danh mục thuốc, bác sĩ. File dùng cùng cấu trúc với Google Sheets cũ nên <b>nhập lại được</b> bằng mục “Nhập dữ liệu” bên cạnh. Nên sao lưu mỗi tuần và cất vào Google Drive.</p>
     <button class="btn primary" id="bkGo" ${S.dl?'':'disabled'}>⬇ Sao lưu toàn bộ ra Excel</button> <span class="sm" id="bkMsg"></span></div></div>
-  ${S.db && S.db._fire ? `<div class="card" style="margin-top:14px"><h2>Nhân viên được dùng app <span class="hint">đăng nhập bằng email</span></h2><div id="nvBox"><div class="sm">Đang tải…</div></div></div>` : ''}
+  ${S.db && S.db._fire ? `<div class="card" style="margin-top:14px"><h2>Người dùng & phân quyền <span class="hint">đăng nhập bằng email</span></h2><div id="nvBox"><div class="sm">Đang tải…</div></div></div>` : ''}
   <p class="sm" style="margin-top:12px">${S.db && S.db._fire ? 'Dữ liệu lưu trên Firebase (Google Cloud) của phòng khám. Chỉ tài khoản có trong danh sách nhân viên mới đọc/ghi được.' : S.db && S.db._local ? 'Chế độ thử: dữ liệu chỉ lưu trên trình duyệt này.' : 'Dữ liệu lưu trên máy chủ Claude của trang này; mọi người được chia sẻ trang (quyền chỉnh sửa trở lên) đều thấy và cập nhật theo thời gian thực.'}</p>`;
   $('#cSave').onclick = async () => {
     const st2 = Object.assign({}, S.settings, { tenPK: $('#cTen').value.trim() || 'Phòng khám', diaChi: $('#cDC').value.trim(), dienThoai: $('#cDT').value.trim(), phiKham: parseAmount($('#cPhi').value), phuThu: parseAmount($('#cPhu').value), phuThuMacDinh: $('#cPhuOn').checked, bacSi: [...new Set($('#cBS').value.split('\n').map(s=>s.trim()).filter(Boolean))], loiDan: $('#cLD').value.trim() });
@@ -1245,15 +1257,37 @@ function bindHeader(){
   sd.onchange = () => { if (!sd.value) return; S.day = sd.value; subscribeDay(); renderAll(true); };
   $('#btnToday').onclick = () => { S.day = todayStr(); sd.value = S.day; subscribeDay(); renderAll(true); };
 }
+const PERM_TABS = ROUTES.filter(r => r !== 'cai-dat');
 async function loadStaff(){
-  const box = $('#nvBox'); if (!box) return; const admin = S.me && S.me.quyen === 'admin';
+  const box = $('#nvBox'); if (!box) return; const admin = isAdmin();
   try {
-    const snap = await S.db.collection('nhanvien').get(); const list = snap.docs.map(d => Object.assign({email:d.id}, d.data())).sort((a,b)=>a.email.localeCompare(b.email));
+    const snap = await S.db.collection('nhanvien').get(); const list = snap.docs.map(d => Object.assign({email:d.id}, d.data())).sort((a,b)=> (a.quyen==='admin'?0:1)-(b.quyen==='admin'?0:1) || a.email.localeCompare(b.email));
     if (!$('#nvBox')) return;
-    box.innerHTML = `<table><thead><tr><th>Email</th><th>Họ tên</th><th>Quyền</th><th></th></tr></thead><tbody>${list.map(n => `<tr><td>${esc(n.email)}</td><td>${esc(n.ten||'')}</td><td>${n.quyen==='admin'?'Quản trị':'Nhân viên'}</td><td class="r">${admin && n.email !== S.me.email ? `<button class="btn sm danger" data-rm="${esc(n.email)}">Xóa</button>` : ''}</td></tr>`).join('')}</tbody></table>
-      ${admin ? `<div class="f3" style="grid-template-columns:2fr 1.5fr 1fr auto;margin-top:12px;align-items:end"><div class="field"><label>Email</label><input type="text" id="nvEmail" inputmode="email"></div><div class="field"><label>Họ tên</label><input type="text" id="nvTen"></div><div class="field"><label>Quyền</label><select id="nvQ"><option value="nhanvien">Nhân viên</option><option value="admin">Quản trị</option></select></div><div class="field"><button class="btn primary" id="nvAdd">Thêm</button></div></div><p class="sm" style="margin:0">Người được thêm tự bấm “Tạo tài khoản” ở màn hình đăng nhập bằng đúng email này. Quản trị viên được thêm/xóa nhân viên.</p>` : '<p class="sm">Chỉ quản trị viên được thêm/xóa nhân viên.</p>'}`;
-    $$('#nvBox [data-rm]').forEach(b => b.onclick = async () => { if (!(await confirmBox('Xóa nhân viên?', b.dataset.rm + ' sẽ không dùng được app nữa.', 'Xóa'))) return; try { await S.db.doc('nhanvien/' + b.dataset.rm).delete(); loadStaff(); } catch(e){ toast(errMsg(e)); } });
-    const add = $('#nvAdd'); if (add) add.onclick = async () => { const em = $('#nvEmail').value.trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ toast('Email không hợp lệ.'); return; } try { await S.db.doc('nhanvien/' + em).set({quyen: $('#nvQ').value, ten: $('#nvTen').value.trim(), themLuc: new Date().toISOString()}); toast('Đã thêm ' + em); loadStaff(); } catch(e){ toast(errMsg(e)); } };
+    const nAdmin = list.filter(n => n.quyen === 'admin').length;
+    const row = n => { const ad = n.quyen === 'admin'; const tabs = staffTabs(n); const self = n.email === (S.me && S.me.email);
+      return `<tr data-em="${esc(n.email)}"><td><b>${esc(n.email)}</b>${self?' <span class="tag">bạn</span>':''}<div class="sm">${esc(n.ten||'')}</div></td>
+      <td><select data-q ${!admin || self ? 'disabled' : ''} style="width:auto"><option value="nhanvien" ${!ad?'selected':''}>Nhân viên</option><option value="admin" ${ad?'selected':''}>Quản trị</option></select></td>
+      ${PERM_TABS.map(r => `<td style="text-align:center"><input type="checkbox" data-t="${r}" ${ad || tabs.includes(r) ? 'checked' : ''} ${ad || !admin ? 'disabled' : ''} aria-label="${esc(TAB_LABELS[r])}"></td>`).join('')}
+      <td style="text-align:center"><input type="checkbox" checked disabled title="Chỉ quản trị viên" ${ad?'':'style="visibility:hidden"'}></td>
+      <td class="r" style="white-space:nowrap">${admin ? `<button class="btn sm" data-save>Lưu</button>${self ? '' : ` <button class="btn sm danger" data-rm>Xóa</button>`}` : ''}</td></tr>`; };
+    box.innerHTML = `<p class="sm" style="margin-top:-4px">Quản trị viên vào được mọi mục, sửa danh mục thuốc, cài đặt và phân quyền. Nhân viên chỉ thấy các mục được tích. Đổi quyền có hiệu lực ngay trên máy của người đó.</p>
+      <div class="scroll"><table><thead><tr><th>Email</th><th>Vai trò</th>${PERM_TABS.map(r => `<th style="text-align:center;white-space:normal;min-width:70px">${esc(TAB_LABELS[r])}</th>`).join('')}<th style="text-align:center">Cài đặt</th><th></th></tr></thead><tbody>${list.map(row).join('')}</tbody></table></div>
+      ${admin ? `<h3 style="font-size:14px;margin:16px 0 8px">Thêm người dùng</h3><div class="f3" style="grid-template-columns:2fr 1.5fr 1fr auto;align-items:end"><div class="field"><label>Email</label><input type="text" id="nvEmail" inputmode="email"></div><div class="field"><label>Họ tên</label><input type="text" id="nvTen"></div><div class="field"><label>Vai trò</label><select id="nvQ"><option value="nhanvien">Nhân viên</option><option value="admin">Quản trị</option></select></div><div class="field"><button class="btn primary" id="nvAdd">Thêm</button></div></div><p class="sm" style="margin:0">Nhân viên mới mặc định được dùng: ${DEFAULT_STAFF_TABS.map(r => TAB_LABELS[r]).join(', ')}. Người được thêm tự bấm “Tạo tài khoản” ở màn hình đăng nhập bằng đúng email này.</p>` : '<p class="sm">Chỉ quản trị viên được phân quyền.</p>'}`;
+    $$('#nvBox tr[data-em]').forEach(tr => {
+      const em = tr.dataset.em; const q = $('[data-q]', tr);
+      q && (q.onchange = () => { const ad = q.value === 'admin'; $$('[data-t]', tr).forEach(c => { c.disabled = ad; if (ad) c.checked = true; }); });
+      const sv = $('[data-save]', tr); if (sv) sv.onclick = async () => {
+        const cur = list.find(n => n.email === em); const quyen = q.value; const tabs = $$('[data-t]', tr).filter(c => c.checked).map(c => c.dataset.t);
+        if (cur.quyen === 'admin' && quyen !== 'admin' && nAdmin <= 1){ toast('Phải còn ít nhất một quản trị viên.'); return; }
+        try { await S.db.doc('nhanvien/' + em).set(Object.assign({}, cur, {quyen, tabs: quyen === 'admin' ? PERM_TABS : tabs, email: undefined, capNhatLuc: new Date().toISOString()})); toast('Đã lưu quyền của ' + em); loadStaff(); } catch(e){ toast(errMsg(e)); }
+      };
+      const rm = $('[data-rm]', tr); if (rm) rm.onclick = async () => {
+        const cur = list.find(n => n.email === em); if (cur.quyen === 'admin' && nAdmin <= 1){ toast('Phải còn ít nhất một quản trị viên.'); return; }
+        if (!(await confirmBox('Xóa người dùng?', em + ' sẽ không dùng được app nữa.', 'Xóa'))) return;
+        try { await S.db.doc('nhanvien/' + em).delete(); loadStaff(); } catch(e){ toast(errMsg(e)); }
+      };
+    });
+    const add = $('#nvAdd'); if (add) add.onclick = async () => { const em = $('#nvEmail').value.trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ toast('Email không hợp lệ.'); return; } const quyen = $('#nvQ').value; try { await S.db.doc('nhanvien/' + em).set({quyen, ten: $('#nvTen').value.trim(), tabs: quyen === 'admin' ? PERM_TABS : DEFAULT_STAFF_TABS, themLuc: new Date().toISOString()}); toast('Đã thêm ' + em); loadStaff(); } catch(e){ toast(errMsg(e)); } };
   } catch(e){ const b = $('#nvBox'); if (b) b.innerHTML = '<div class="sm bad">Không tải được danh sách nhân viên.</div>'; }
 }
 function blobDownloader(){ return { save: async ({filename, data}) => { const blob = data instanceof Blob ? data : new Blob([data], {type: /\.html$/.test(filename) ? 'text/html' : 'application/octet-stream'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); return {status:'saved'}; } }; }
@@ -1285,11 +1319,16 @@ function bootFirebase(){
       const me = await fs.doc('nhanvien/' + email).get();
       if (!me.exists){ showLogin('Tài khoản ' + email + ' chưa được cấp quyền. Nhờ quản trị viên thêm email này ở Cài đặt → Nhân viên, rồi tải lại trang.'); $('#btnOut').hidden = false; return; }
       S.me = Object.assign({email}, me.data());
+      if (!S._meSub) S._meSub = fs.doc('nhanvien/' + email).onSnapshot(sn => {
+        if (!sn.exists){ S.me = null; showLogin('Tài khoản ' + email + ' đã bị gỡ khỏi danh sách nhân viên.'); return; }
+        const old = JSON.stringify(S.me); S.me = Object.assign({email}, sn.data());
+        if (old !== JSON.stringify(S.me)){ $('#who').textContent = email + (S.me.quyen === 'admin' ? ' · quản trị' : ''); applyRoute(); }
+      }, () => {});
     } catch(e){ showLogin(e && e.code === 'permission-denied' ? 'Tài khoản ' + email + ' chưa được cấp quyền.' : 'Không kiểm tra được quyền (' + (e && e.code) + ').'); $('#btnOut').hidden = false; return; }
     $('#login').classList.remove('show'); $('#who').textContent = email + (S.me.quyen === 'admin' ? ' · quản trị' : ''); $('#btnOut').hidden = false;
     if (S.db) return;
     S.db = { doc: p => fs.doc(p), collection: p => fs.collection(p), _fire: true, _fs: fs };
-    S.mode = 'db'; subscribeStatic(); subscribeDay(); renderAll(true);
+    S.mode = 'db'; subscribeStatic(); subscribeDay(); applyRoute();
   });
 }
 async function getCap(n){ try { return (window.claude && typeof window.claude.use === 'function') ? await window.claude.use(n) : null; } catch(e){ return null; } }

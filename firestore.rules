@@ -1,6 +1,8 @@
 rules_version = '2';
 // Luật bảo vệ dữ liệu phòng khám.
-// Chỉ tài khoản đã xác nhận email VÀ có tên trong bộ sưu tập "nhanvien" mới đọc/ghi được.
+// - Chỉ tài khoản đã xác nhận email VÀ có tên trong bộ sưu tập "nhanvien" mới đọc/ghi được.
+// - Chỉ quản trị viên (quyen == 'admin') được sửa cài đặt và phân quyền.
+// - Danh mục thuốc: mọi nhân viên được đọc (để kê đơn); chỉ quản trị viên hoặc người được cấp mục "Danh mục thuốc" được sửa.
 // Dán toàn bộ nội dung này vào Firebase Console → Firestore Database → Rules → Publish.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -8,32 +10,35 @@ service cloud.firestore {
     function email() {
       return request.auth.token.email.lower();
     }
+    function me() {
+      return get(/databases/$(database)/documents/nhanvien/$(email())).data;
+    }
     function isStaff() {
       return request.auth != null
         && request.auth.token.email_verified == true
         && exists(/databases/$(database)/documents/nhanvien/$(email()));
     }
     function isAdmin() {
-      return isStaff()
-        && get(/databases/$(database)/documents/nhanvien/$(email())).data.quyen == 'admin';
+      return isStaff() && me().quyen == 'admin';
+    }
+    function hasTab(t) {
+      return isStaff() && (me().quyen == 'admin' || me().get('tabs', []).hasAny([t]));
     }
 
-    // Danh sách nhân viên: ai cũng tự đọc được hồ sơ của mình để app kiểm tra quyền;
-    // nhân viên xem được danh sách; chỉ quản trị viên thêm/xóa.
+    // Người dùng & phân quyền: ai cũng tự đọc được hồ sơ của mình để app kiểm tra quyền;
+    // chỉ quản trị viên xem danh sách, thêm, sửa, xóa.
     match /nhanvien/{em} {
       allow get: if request.auth != null && request.auth.token.email_verified == true && em == email();
-      allow read: if isStaff();
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
     }
 
-    // Cài đặt phòng khám, danh mục thuốc, bộ đếm mã BN / số thứ tự
-    match /cauhinh/{id} { allow read, write: if isStaff(); }
-    match /thuoc/{id}   { allow read, write: if isStaff(); }
+    match /cauhinh/{id} { allow read: if isStaff(); allow write: if isAdmin(); }
+    match /thuoc/{id}   { allow read: if isStaff(); allow write: if hasTab('thuoc'); }
+
+    // Bộ đếm mã BN / số thứ tự, hồ sơ bệnh nhân, lượt khám: nhân viên dùng hằng ngày
     match /meta/{id}    { allow read, write: if isStaff(); }
     match /ngay/{id}    { allow read, write: if isStaff(); }
-
-    // Hồ sơ bệnh nhân (chia 10 nhóm) và lượt khám theo ngày
-    match /bn/{shard}/ds/{ma}     { allow read, write: if isStaff(); }
-    match /kham/{ngay}/ds/{id}    { allow read, write: if isStaff(); }
+    match /bn/{shard}/ds/{ma}  { allow read, write: if isStaff(); }
+    match /kham/{ngay}/ds/{id} { allow read, write: if isStaff(); }
   }
 }

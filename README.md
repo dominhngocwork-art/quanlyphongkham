@@ -53,7 +53,14 @@ Cần làm 3 phần, mỗi phần chỉ làm một lần: **Firebase** → **Git
 4. Vào **Cài đặt**:
    - Điền tên, địa chỉ, số điện thoại phòng khám, phí khám, danh sách bác sĩ → **Lưu cài đặt**.
    - **Nhập dữ liệu từ Google Sheets cũ:** trên Google Sheets chọn *Tệp → Tải xuống → Microsoft Excel (.xlsx)*, chọn file đó → **Bắt đầu nhập**. (Nhập danh mục thuốc, hồ sơ bệnh nhân, toa thuốc cũ, bác sĩ. Nhập lại lần hai không bị trùng.)
-   - **Nhân viên:** thêm email từng người (tiếp đón, bác sĩ, quầy thuốc). Mỗi người tự mở web, bấm **Tạo tài khoản** bằng đúng email đó và xác nhận email.
+   - **Người dùng & phân quyền:** thêm email từng người (tiếp đón, bác sĩ, quầy thuốc). Mỗi người tự mở web, bấm **Tạo tài khoản** bằng đúng email đó và xác nhận email.
+
+## Phân quyền
+
+- **Quản trị viên** (nên có 1–2 người): vào được mọi mục, sửa danh mục thuốc, cài đặt, nhập/sao lưu dữ liệu và phân quyền.
+- **Nhân viên**: chỉ thấy các mục được tích ở **Cài đặt → Người dùng & phân quyền**. Mặc định: Tiếp đón, Khám bệnh, Soạn thuốc, Bệnh nhân. Các mục *Quản lý trong ngày, Danh mục thuốc, Thống kê* bị khóa trừ khi quản trị viên tích cho từng người. Mục *Cài đặt* chỉ dành cho quản trị viên.
+- Đổi vai trò/quyền rồi bấm **Lưu** trên dòng của người đó; có hiệu lực ngay trên máy của họ. Luôn phải còn ít nhất một quản trị viên.
+- Lưu ý: nhân viên kê đơn/soạn thuốc vẫn thấy tiền của từng toa họ làm; khóa mục chỉ ngăn xem tổng hợp doanh thu, thống kê và sửa danh mục thuốc.
 
 ---
 
@@ -70,7 +77,7 @@ Cần làm 3 phần, mỗi phần chỉ làm một lần: **Firebase** → **Git
 | Giá thuốc, thêm thuốc, đánh dấu hết thuốc | Tab **Danh mục thuốc** |
 | Hồ sơ bệnh nhân | Tab **Bệnh nhân** |
 | Phí khám, khoản cộng thêm, bác sĩ, tên phòng khám, lời dặn | Tab **Cài đặt** |
-| Thêm/xóa nhân viên | **Cài đặt → Nhân viên** (chỉ quản trị viên) |
+| Thêm/xóa người dùng, phân quyền | **Cài đặt → Người dùng & phân quyền** (chỉ quản trị viên) |
 | Chức năng, giao diện | Sửa `index.html` (nhờ Claude sửa), rồi trên GitHub mở file → biểu tượng ✏️ hoặc *Add file → Upload files* để thay file mới → Commit. Web cập nhật sau 1–2 phút, **dữ liệu giữ nguyên**. |
 
 ## Chi phí và giới hạn
