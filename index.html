@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quản lý phòng khám</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<script src="config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f5f5f2; --surface:#fcfcfb; --surface-2:#f0efeb; --surface-3:#e8e7e2;
+  --text:#0b0b0b; --text-2:#52514e; --muted:#85847e;
+  --border:#e3e2dd; --grid:#ebeae6;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --accent:#1f5fb0; --accent-ink:#fff;
+  --danger:#c03232;
+  --warn-bg:#fff4dc; --warn-ink:#7a4b00; --warn-line:#e8b44a;
+  --info-bg:#e9f1fb; --info-ink:#1d4f8f;
+  --ok-bg:#e5f5ec; --ok-ink:#17643c;
+  --radius:12px; --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --bg:#121211; --surface:#1a1a19; --surface-2:#222220; --surface-3:#2b2b29;
+    --text:#f0efec; --text-2:#c3c2b7; --muted:#8f8e86;
+    --border:#2f2f2c; --grid:#272725;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+    --accent:#3987e5; --danger:#e66767;
+    --warn-bg:#3a2c0b; --warn-ink:#f2cf86; --warn-line:#8a6a1f;
+    --info-bg:#16263a; --info-ink:#a9c8ef;
+    --ok-bg:#12301f; --ok-ink:#93d9b0;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#121211; --surface:#1a1a19; --surface-2:#222220; --surface-3:#2b2b29;
+  --text:#f0efec; --text-2:#c3c2b7; --muted:#8f8e86;
+  --border:#2f2f2c; --grid:#272725;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  --accent:#3987e5; --danger:#e66767;
+  --warn-bg:#3a2c0b; --warn-ink:#f2cf86; --warn-line:#8a6a1f;
+  --info-bg:#16263a; --info-ink:#a9c8ef;
+  --ok-bg:#12301f; --ok-ink:#93d9b0;
+  --shadow:none;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);font-size:14.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+.wrap{max-width:1280px;margin:0 auto;padding:0 16px}
+[hidden]{display:none!important}
+
+header.top{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0 4px;flex-wrap:wrap}
+.brand h1{font-size:17px;margin:0;font-weight:700}
+.brand .sub{font-size:12.5px;color:var(--text-2)}
+.brand .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav.tabs a{padding:9px 11px;text-decoration:none;color:var(--text-2);font-weight:500;border-bottom:2px solid transparent;white-space:nowrap;font-size:14px}
+nav.tabs a.on{color:var(--text);border-bottom-color:var(--accent)}
+nav.tabs a .cnt{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--surface-3);font-size:11.5px;text-align:center;margin-left:4px;color:var(--text)}
+
+select,input[type=text],input[type=date],input[type=search],input[type=number],input[type=tel],textarea{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;min-height:36px;width:100%}
+textarea{resize:vertical}
+select:focus,input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:7px 13px;min-height:36px;cursor:pointer;font-weight:500;font-size:14px;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.danger{color:var(--danger)}
+.btn.sm{min-height:30px;padding:4px 10px;font-size:13px}
+.btn.big{min-height:44px;font-size:15px;padding:10px 18px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;padding:6px 12px;cursor:pointer;font-size:13.5px;color:var(--text-2);font-weight:500}
+.seg button.on{background:var(--text);color:var(--surface)}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.card h2{font-size:15px;margin:0 0 12px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card h2 .hint{font-weight:400;color:var(--muted);font-size:12.5px}
+.card h2 .sp{flex:1}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+.page{padding:16px 0 80px}
+.cols{display:grid;gap:14px}
+.cols > *{min-width:0}
+.c-reception{grid-template-columns:minmax(320px,420px) 1fr}
+.c-exam{grid-template-columns:260px 1fr}
+.c-disp{grid-template-columns:280px 1fr}
+@media (max-width:980px){.c-reception,.c-exam,.c-disp{grid-template-columns:1fr}}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+.tile .lab{font-size:12.5px;color:var(--text-2)}
+.tile .val{font-size:clamp(18px,3vw,24px);font-weight:700;letter-spacing:-.02em;white-space:nowrap}
+.tile .val small{font-size:.6em;font-weight:500;color:var(--text-2)}
+.tile .note{font-size:12px;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+.field label{font-size:12.5px;color:var(--text-2);font-weight:500}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.f3{display:grid;grid-template-columns:2fr 1fr;gap:10px}
+.sm{font-size:12.5px;color:var(--muted)}
+.muted{color:var(--text-2)}
+.bad{color:var(--danger)}
+
+/* status chips */
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:1px 9px;border-radius:999px;white-space:nowrap;font-weight:500;background:var(--surface-2);color:var(--text-2)}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.9}
+.st-cho-kham{background:var(--warn-bg);color:var(--warn-ink)}
+.st-dang-kham{background:var(--info-bg);color:var(--info-ink)}
+.st-cho-soan{background:#f3e8fb;color:#6a2e95}
+.st-xong{background:var(--ok-bg);color:var(--ok-ink)}
+:root[data-theme="dark"] .st-cho-soan{background:#2c1d38;color:#d6b4ef}
+@media (prefers-color-scheme: dark){:root:where(:not([data-theme="light"])) .st-cho-soan{background:#2c1d38;color:#d6b4ef}}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{font-weight:600;color:var(--text-2);text-align:left;font-size:12.5px;padding:7px 8px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface)}
+td{padding:8px;border-bottom:1px solid var(--grid);vertical-align:top}
+td.r,th.r{text-align:right}
+tr.click{cursor:pointer}
+tr.click:hover{background:var(--surface-2)}
+.scroll{overflow-x:auto}
+.tall{max-height:62vh;overflow:auto}
+.tall thead th{position:sticky;top:0;z-index:1}
+
+/* queue list */
+.q{display:flex;flex-direction:column;gap:6px}
+.qi{display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)}
+.qi:hover{background:var(--surface-2)}
+.qi.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.qi .stt{font-weight:700;font-size:16px;min-width:34px;text-align:center}
+.qi .nm{font-weight:600;line-height:1.25}
+.qi .meta{font-size:12px;color:var(--muted)}
+.qh{font-size:12.5px;color:var(--text-2);font-weight:600;margin:10px 0 2px;display:flex;justify-content:space-between}
+
+/* patient header */
+.ph{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.ph .big{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.ph .stt{font-size:13px;color:var(--text-2)}
+.flags{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.flag{border-radius:8px;padding:4px 10px;font-size:13px;background:var(--surface-2)}
+.flag b{font-weight:600;margin-right:4px}
+.flag.warn{background:var(--warn-bg);color:var(--warn-ink);border:1px solid var(--warn-line)}
+
+/* history */
+.hist{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.hc{border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;background:var(--surface-2)}
+.hc .d{font-weight:600}
+.hc ul{margin:6px 0;padding-left:16px}
+.hc li{margin:1px 0}
+
+/* rx editor */
+.rx{width:100%;border-collapse:collapse;font-size:13.5px;min-width:980px}
+.rx th{background:var(--surface-2);position:static}
+.rx td{padding:4px;border-bottom:1px solid var(--grid);vertical-align:middle}
+.rx input,.rx select{min-height:32px;padding:4px 7px;border-radius:6px}
+.rx .w-sl{width:70px}.rx .w-gia{width:100px}.rx .w-tien{width:110px}.rx .w-nd{width:64px}.rx .w-ml{width:84px}
+.rx td.tien{text-align:right;font-weight:600;white-space:nowrap}
+.rx .edited{outline:1.5px dashed var(--warn-line)}
+.xbtn{border:0;background:transparent;cursor:pointer;color:var(--muted);font-size:18px;line-height:1;padding:4px 6px;border-radius:6px}
+.xbtn:hover{background:var(--surface-3);color:var(--danger)}
+.total{display:flex;justify-content:flex-end;align-items:baseline;gap:12px;padding:12px 4px 0;font-size:15px}
+.total b{font-size:24px;letter-spacing:-.02em}
+
+/* autocomplete */
+.ac{position:relative}
+.ac-list{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.14);max-height:340px;overflow:auto;z-index:15;display:none}
+.ac-list.show{display:block}
+.ac-it{padding:7px 10px;cursor:pointer;display:flex;justify-content:space-between;gap:10px;font-size:13.5px;border-bottom:1px solid var(--grid)}
+.ac-it:last-child{border-bottom:0}
+.ac-it:hover,.ac-it.on{background:var(--surface-2)}
+.ac-it .m{font-size:12px;color:var(--muted)}
+.ac-it.het{opacity:.55}
+.tag{display:inline-block;font-size:11.5px;padding:0 7px;border-radius:999px;background:var(--surface-3);color:var(--text-2);margin-left:6px;white-space:nowrap}
+.tag.red{background:var(--warn-bg);color:var(--warn-ink)}
+
+.banner{border-radius:10px;padding:10px 14px;font-size:13.5px;margin-top:12px;display:none}
+.banner.info{display:block;background:var(--info-bg);color:var(--info-ink)}
+.banner.warn{display:block;background:var(--warn-bg);color:var(--warn-ink)}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:var(--text);color:var(--surface);padding:11px 18px;border-radius:10px;font-size:14px;z-index:80;display:none;max-width:92vw;text-align:center}
+.toast.big{font-size:18px;font-weight:600;padding:16px 26px}
+.empty{text-align:center;padding:36px 16px;color:var(--text-2)}
+.empty h3{margin:0 0 6px;color:var(--text);font-size:16px}
+
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.42);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:5vh 12px;overflow:auto}
+.ov.show{display:flex}
+.modal{background:var(--surface);width:100%;max-width:560px;border-radius:16px;padding:20px}
+.modal.wide{max-width:920px}
+.modal h3{margin:0 0 14px;font-size:17px}
+.actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px}
+.actions .left{margin-right:auto}
+.check{display:flex;align-items:center;gap:8px;font-size:14px}
+.check input{width:18px;height:18px}
+.bars .b{display:grid;grid-template-columns:minmax(120px,190px) 1fr auto;gap:10px;align-items:center;font-size:13.5px;padding:3px 0}
+.bars .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-2)}
+.bars .tr{height:9px;background:var(--surface-2);border-radius:5px;overflow:hidden}
+.bars .fl{height:100%;border-radius:5px;background:var(--s1)}
+.bars .v{text-align:right;white-space:nowrap}
+.chart-wrap{position:relative}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;box-shadow:0 4px 18px rgba(0,0,0,.12);min-width:170px;display:none;z-index:5}
+.prog{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden;margin:8px 0}
+.prog > div{height:100%;background:var(--accent);width:0}
+.dispensed td{color:var(--muted);text-decoration:line-through}
+.sticky{position:sticky;top:110px}
+.c-day{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}
+@media (max-width:980px){.sticky{position:static}.c-day{grid-template-columns:1fr}}
+@media (max-width:700px){.hide-s{display:none}.f3{grid-template-columns:1fr 1fr}}
+.foot{color:var(--muted);font-size:12px;padding:10px 0 40px;text-align:center}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <div><h1 id="hName">Phòng khám</h1><div class="sub" id="hSub">Quản lý khám bệnh, kê đơn, soạn thuốc</div></div>
+      <div class="right">
+        <span class="sm" id="who"></span><button class="btn sm" id="btnOut" hidden>Đăng xuất</button>
+        <label class="sm" for="selDay">Ngày làm việc</label>
+        <input type="date" id="selDay" style="width:auto">
+        <button class="btn sm" id="btnToday">Hôm nay</button>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <a href="#tiep-don" data-r="tiep-don">Tiếp đón<span class="cnt" id="cnt-kham" hidden></span></a>
+      <a href="#kham-benh" data-r="kham-benh">Khám bệnh</a>
+      <a href="#soan-thuoc" data-r="soan-thuoc">Soạn thuốc<span class="cnt" id="cnt-soan" hidden></span></a>
+      <a href="#trong-ngay" data-r="trong-ngay">Quản lý trong ngày</a>
+      <a href="#benh-nhan" data-r="benh-nhan">Bệnh nhân</a>
+      <a href="#thuoc" data-r="thuoc">Danh mục thuốc</a>
+      <a href="#thong-ke" data-r="thong-ke">Thống kê</a>
+      <a href="#cai-dat" data-r="cai-dat">Cài đặt</a>
+    </nav>
+  </div>
+</header>
+<main class="wrap">
+  <div class="banner" id="banner"></div>
+  <section class="page" id="v-tiep-don"></section>
+  <section class="page" id="v-kham-benh" hidden></section>
+  <section class="page" id="v-soan-thuoc" hidden></section>
+  <section class="page" id="v-trong-ngay" hidden></section>
+  <section class="page" id="v-benh-nhan" hidden></section>
+  <section class="page" id="v-thuoc" hidden></section>
+  <section class="page" id="v-thong-ke" hidden></section>
+  <section class="page" id="v-cai-dat" hidden></section>
+</main>
+<div class="ov" id="login" style="background:var(--bg)"><div class="modal" style="max-width:400px;margin-top:8vh">
+  <h3 id="lgTitle">Đăng nhập</h3>
+  <div class="field"><label for="lgEmail">Email</label><input type="text" id="lgEmail" autocomplete="username" inputmode="email"></div>
+  <div class="field"><label for="lgPass">Mật khẩu</label><input type="password" id="lgPass" autocomplete="current-password" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;min-height:36px;width:100%"></div>
+  <div class="sm bad" id="lgMsg" style="margin-bottom:8px"></div>
+  <div class="actions" style="justify-content:space-between"><button class="btn sm" id="lgForgot">Quên mật khẩu</button><span class="grow"></span><button class="btn" id="lgSignup">Tạo tài khoản</button><button class="btn primary" id="lgGo">Đăng nhập</button></div>
+  <p class="sm" style="margin:12px 0 0">Tài khoản chỉ dùng được khi quản trị viên đã thêm email vào danh sách nhân viên.</p>
+</div></div>
+<div class="ov" id="ov"><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+/* ================= helpers ================= */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const nf = new Intl.NumberFormat('vi-VN');
+const fmt = n => nf.format(Math.round(+n||0));
+const fmtQ = n => (+n||0).toLocaleString('vi-VN',{maximumFractionDigits:2});
+const money = n => fmt(n) + ' ₫';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = (n,l=2) => String(n).padStart(l,'0');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+const HOLDER = uid();
+const norm = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase().replace(/\s+/g,' ').trim();
+function todayStr(){ const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+const viDate = s => s ? `${s.slice(8,10)}/${s.slice(5,7)}/${s.slice(0,4)}` : '';
+const THU = ['Chủ nhật','Thứ hai','Thứ ba','Thứ tư','Thứ năm','Thứ sáu','Thứ bảy'];
+function dayName(s){ const d = new Date(s+'T00:00:00'); return THU[d.getDay()]; }
+function hhmm(iso){ if(!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function fnv(str){ let h = 0x811c9dc5; for (let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h>>>0).toString(36); }
+function parseMoney(v){
+  if (typeof v === 'number') return Math.round(v);
+  let s = String(v ?? '').trim(); if (!s) return 0;
+  const neg = /^-/.test(s);
+  s = s.replace(/[^\d.,]/g,''); if (!s) return 0;
+  if (/^\d{1,3}([.,]\d{3})+$/.test(s)) s = s.replace(/[.,]/g,'');
+  else if (/,\d{1,2}$/.test(s)) s = s.replace(/\./g,'').replace(',','.');
+  else s = s.replace(/,/g,'');
+  const n = Math.round(parseFloat(s)||0); return neg ? -n : n;
+}
+function parseAmount(v){ // accepts 150k, 1,5tr
+  const s = norm(v).replace(/\s|₫|vnd|d$/g,'');
+  const m = s.match(/^([\d.,]+)(k|tr|trieu)$/);
+  if (m){ const b = parseFloat(m[1].replace(',','.')) || 0; return Math.round(b * (m[2]==='k'?1e3:1e6)); }
+  return parseMoney(s);
+}
+function parseQty(v){
+  if (typeof v === 'number') return v;
+  let s = String(v ?? '').trim(); if (!s) return 0;
+  const fr = s.match(/^(\d+)\s*\/\s*(\d+)/); if (fr) return (+fr[1])/(+fr[2]||1);
+  s = s.replace(/[^\d.,]/g,'');
+  if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g,''); else s = s.replace(',','.');
+  return parseFloat(s) || 0;
+}
+function soLanTrongNgay(buoi){ return String(buoi||'').split(/[,;+\/]| và /).map(x=>x.trim()).filter(Boolean).length; }
+function tuoi(ns){ const y = +String(ns||'').slice(-4); return y > 1900 && y <= new Date().getFullYear() ? new Date().getFullYear() - y : ''; }
+
+/* ================= UI primitives ================= */
+let toastT;
+function toast(msg, big){ const t = $('#toast'); t.textContent = msg; t.className = 'toast' + (big?' big':''); t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(()=> t.style.display='none', big?4500:3000); }
+function setBanner(msg, kind){ const b = $('#banner'); if(!msg){ b.className='banner'; b.textContent=''; return; } b.className='banner '+(kind||'info'); b.textContent = msg; }
+function openModal(html, wide){ const m = $('#modal'); m.className = 'modal' + (wide?' wide':''); m.innerHTML = html; $('#ov').classList.add('show'); return m; }
+function closeModal(){ $('#ov').classList.remove('show'); $('#modal').innerHTML=''; }
+$('#ov').addEventListener('mousedown', e => { if (e.target.id === 'ov') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#ov').classList.contains('show')) closeModal(); });
+function confirmBox(title, msg, yes){
+  return new Promise(res => {
+    const m = openModal(`<h3>${esc(title)}</h3><p class="muted" style="margin:0 0 16px">${esc(msg)}</p><div class="actions"><button class="btn" data-a="no">Hủy</button><button class="btn primary" data-a="yes">${esc(yes||'Đồng ý')}</button></div>`);
+    m.querySelector('[data-a=no]').onclick = () => { closeModal(); res(false); };
+    m.querySelector('[data-a=yes]').onclick = () => { closeModal(); res(true); };
+  });
+}
+function errMsg(e){
+  const c = e && e.code;
+  if (c === 'permission-denied') return 'Tài khoản không có quyền thực hiện thao tác này.';
+  if (c === 'unavailable') return 'Mất kết nối mạng, vui lòng thử lại.';
+  if (c === 'resource-exhausted') return 'Vượt hạn mức sử dụng Firebase trong ngày.';
+  if (c === 'quota_exceeded') return 'Kho dữ liệu đã đầy.';
+  if (c === 'invalid_argument') return 'Bạn không có quyền ghi dữ liệu (hoặc dữ liệu không hợp lệ).';
+  if (c === 'resource_exhausted') return 'Thao tác quá nhanh, thử lại sau giây lát.';
+  if (c === 'revoked') return 'Quyền truy cập đã thay đổi, hãy tải lại trang.';
+  return 'Không lưu được, vui lòng thử lại.';
+}
+let rafP = false;
+function scheduleRender(){ if (rafP) return; rafP = true; requestAnimationFrame(()=>{ rafP=false; renderAll(); }); }
+
+/* ================= local fallback store (same API subset as db) ================= */
+function LocalDB(){
+  const K = 'pk-local-v1'; let store = {};
+  try { store = JSON.parse(localStorage.getItem(K) || '{}'); } catch(e){}
+  const subs = new Set(); let pt;
+  const persist = () => { clearTimeout(pt); pt = setTimeout(()=>{ try { localStorage.setItem(K, JSON.stringify(store)); } catch(e){} }, 200); };
+  let nt = null; const notify = () => { if (nt) return; nt = setTimeout(() => { nt = null; subs.forEach(f => f()); }, 120); };
+  const parent = p => p.split('/').slice(0,-1).join('/');
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const snapDoc = p => ({ id: p.split('/').pop(), exists: p in store, data: () => p in store ? clone(store[p]) : undefined, metadata:{fromCache:false,hasPendingWrites:false} });
+  const qsnap = c => { const docs = Object.keys(store).filter(k => parent(k) === c).sort().map(snapDoc); return {docs, size:docs.length, empty:!docs.length, metadata:{fromCache:false}, docChanges:()=>[]}; };
+  const docRef = p => ({ id: p.split('/').pop(), path: p,
+    get: async () => snapDoc(p),
+    set: async d => { store[p] = clone(d); persist(); notify(); },
+    update: async d => { if (!(p in store)) throw {code:'invalid_argument'}; Object.assign(store[p], clone(d)); persist(); notify(); },
+    delete: async () => { delete store[p]; persist(); notify(); },
+    acquire: async () => ({acquired:true}),
+    onSnapshot: n => { const f = () => n(snapDoc(p)); subs.add(f); setTimeout(f,0); return () => subs.delete(f); },
+    collection: c => colRef(p + '/' + c) });
+  const colRef = c => ({ path: c, doc: id => docRef(c + '/' + (id || uid())), get: async () => qsnap(c),
+    onSnapshot: n => { const f = () => n(qsnap(c)); subs.add(f); setTimeout(f,0); return () => subs.delete(f); } });
+  return { doc: docRef, collection: colRef, _local: true };
+}
+
+/* ================= state ================= */
+const DEFAULT_SETTINGS = { tenPK:'Phòng khám', diaChi:'', dienThoai:'', phiKham:50000, phuThu:50000, phuThuMacDinh:false, bacSi:[], loiDan:'Uống thuốc đúng hướng dẫn. Tái khám khi hết thuốc hoặc khi có bất thường.' };
+const S = {
+  db:null, dl:null, mode:'loading',
+  settings: JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),
+  day: todayStr(), visits: [], dayLoaded:false, unsubDay:null,
+  patients: new Map(), patShards: {}, drugs: [], route:'tiep-don',
+  selKham: null, selSoan: null, draft: null, histCache: new Map(),
+  bacSi: lsGet('pk-bacsi') || '',
+  tdFilter:'all', bnSearch:'', bnPage:0, drugSearch:'', tkMode:'thang', tkYear:new Date().getFullYear(), tkMonth:new Date().getMonth()+1, tkData:null,
+  pickPat:null, imp:null
+};
+function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+function lsSet(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+const STATUS = { 'cho-kham':'Chờ khám', 'dang-kham':'Đang khám', 'cho-soan':'Chờ soạn thuốc', 'xong':'Đã xong' };
+const chip = st => `<span class="chip st-${st}">${STATUS[st]||st}</span>`;
+const shardOf = ma => 's' + ((String(ma).match(/(\d)\D*$/)||[])[1] ?? (parseInt(fnv(ma),36)%10));
+const visitPath = (day) => `kham/${day}/ds`;
+
+/* ================= data access ================= */
+async function withRetry(fn, tries=3){
+  for (let i=0;;i++){
+    try { return await fn(); }
+    catch(e){ const c = e && e.code; if (i < tries-1 && (c==='unavailable' || c==='resource_exhausted' || c==='aborted')){ await sleep((c==='resource_exhausted'?1500:400)*(i+1) + Math.random()*400); continue; } throw e; }
+  }
+}
+function subscribeStatic(){
+  S.db.doc('cauhinh/chung').onSnapshot(s => { if (s.exists) S.settings = Object.assign({}, DEFAULT_SETTINGS, s.data()); scheduleRender(); }, e => console.error(e));
+  S.db.collection('thuoc').onSnapshot(s => { S.drugs = s.docs.map(d => Object.assign({}, d.data(), {id:d.id})).sort((a,b) => (a.thuTu??9999)-(b.thuTu??9999) || String(a.ten).localeCompare(String(b.ten),'vi')); scheduleRender(); }, e => console.error(e));
+  for (let i=0;i<10;i++){
+    const sh = 's'+i;
+    S.db.collection(`bn/${sh}/ds`).onSnapshot(s => {
+      S.patShards[sh] = s.docs.map(d => Object.assign({}, d.data(), {ma:d.id}));
+      const m = new Map(); Object.values(S.patShards).forEach(arr => arr.forEach(p => m.set(p.ma, p))); S.patients = m;
+      scheduleRender();
+    }, e => console.error(e));
+  }
+}
+function subscribeDay(){
+  if (S.unsubDay) { try{S.unsubDay();}catch(e){} }
+  S.visits = []; S.dayLoaded = false; S.selKham = null; S.selSoan = null; S.draft = null;
+  const t = setTimeout(()=>{ if(!S.dayLoaded) setBanner('Chưa tải được dữ liệu ngày này từ máy chủ. Kiểm tra kết nối mạng.', 'warn'); }, 10000);
+  S.unsubDay = S.db.collection(visitPath(S.day)).onSnapshot(s => {
+    S.visits = s.docs.map(d => Object.assign({}, d.data(), {id:d.id})).sort((a,b) => (a.stt||0)-(b.stt||0));
+    if (!s.metadata.fromCache && !S.dayLoaded){ S.dayLoaded = true; clearTimeout(t); if ($('#banner').classList.contains('warn')) setBanner(''); }
+    // keep draft in sync if someone else changed status
+    scheduleRender();
+  }, e => { console.error(e); clearTimeout(t); setBanner('Lỗi tải dữ liệu: ' + (e && e.code), 'warn'); });
+}
+async function withLease(path, fn){
+  if (S.db._fire){ const real = S.db._fs.doc(path); return withRetry(() => S.db._fs.runTransaction(tx => fn({ get: () => tx.get(real), set: d => { tx.set(real, d); return Promise.resolve(); } }))); }
+  const ref = S.db.doc(path);
+  for (let i=0;i<25;i++){
+    let r;
+    try { r = await withRetry(()=> ref.acquire({holder:HOLDER, ttlMs:5000})); }
+    catch(e){ if (e && (e.code==='revoked' || e.code==='quota_exceeded')) throw e; return await fn(ref); }
+    if (r && r.acquired) return await fn(ref);
+    await sleep(250 + Math.random()*400);
+  }
+  throw {code:'unavailable'};
+}
+function maxPatientNo(){ let mx = 0; S.patients.forEach((p,ma) => { const m = String(ma).match(/(\d+)$/); if (m) mx = Math.max(mx, +m[1]); }); return mx; }
+async function nextMaBN(){
+  return withLease('meta/dem', async ref => {
+    const s = await ref.get(); let last = s.exists ? (+s.data().lastBN||0) : 0;
+    last = Math.max(last, maxPatientNo()); const next = last + 1;
+    await ref.set({lastBN: next});
+    return 'DN.' + pad(next, 5);
+  });
+}
+async function nextSTT(day){
+  return withLease(`ngay/${day}`, async ref => {
+    const s = await ref.get(); let last = s.exists ? (+s.data().lastSTT||0) : 0;
+    const local = day === S.day ? Math.max(0, ...S.visits.map(v => +v.stt||0)) : 0;
+    const next = Math.max(last, local) + 1;
+    await ref.set({ngay: day, lastSTT: next});
+    return next;
+  });
+}
+async function savePatient(p){ const ma = p.ma; const data = Object.assign({}, p); delete data.ma; await withRetry(()=> S.db.collection(`bn/${shardOf(ma)}/ds`).doc(ma).set(data)); S.patients.set(ma, Object.assign({}, p)); }
+async function saveVisit(v){ const data = Object.assign({}, v); delete data.id; await withRetry(()=> S.db.collection(visitPath(v.ngay)).doc(v.id).set(data)); }
+async function patchVisit(v, patch){ await withRetry(()=> S.db.collection(visitPath(v.ngay)).doc(v.id).update(patch)); }
+async function linkVisitToPatient(v){
+  if (!v.maBN) return; const p = S.patients.get(v.maBN); if (!p) return;
+  const ref = `${v.ngay}/${v.id}`; const lk = Array.isArray(p.lk) ? p.lk.slice() : [];
+  if (lk.includes(ref)) return; lk.push(ref); lk.sort();
+  await withRetry(()=> S.db.collection(`bn/${shardOf(v.maBN)}/ds`).doc(v.maBN).update({lk, lanCuoi: lk[lk.length-1].slice(0,10)}));
+}
+async function getVisitByRef(ref){
+  if (S.histCache.has(ref)) return S.histCache.get(ref);
+  const [day, id] = ref.split('/');
+  const s = await withRetry(()=> S.db.collection(visitPath(day)).doc(id).get());
+  const v = s.exists ? Object.assign({}, s.data(), {id}) : null;
+  S.histCache.set(ref, v); return v;
+}
+
+/* ================= routing ================= */
+const ROUTES = ['tiep-don','kham-benh','soan-thuoc','trong-ngay','benh-nhan','thuoc','thong-ke','cai-dat'];
+function applyRoute(){
+  const h = (location.hash||'').slice(1); S.route = ROUTES.includes(h) ? h : 'tiep-don';
+  ROUTES.forEach(r => { $('#v-'+r).hidden = r !== S.route; });
+  $$('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.r === S.route));
+  renderAll(true);
+}
+window.addEventListener('hashchange', applyRoute);
+
+/* ================= render dispatcher ================= */
+let lastRoute = null;
+function renderAll(force){
+  $('#hName').textContent = S.settings.tenPK || 'Phòng khám';
+  $('#hSub').textContent = [S.settings.diaChi, S.settings.dienThoai].filter(Boolean).join(' · ') || 'Quản lý khám bệnh, kê đơn, soạn thuốc';
+  const nk = S.visits.filter(v => v.trangThai==='cho-kham').length, ns = S.visits.filter(v => v.trangThai==='cho-soan').length;
+  const ck = $('#cnt-kham'), cs = $('#cnt-soan'); ck.hidden = !nk; ck.textContent = nk; cs.hidden = !ns; cs.textContent = ns;
+  if (S.mode === 'loading'){ $('#v-'+S.route).innerHTML = '<div class="card empty">Đang tải…</div>'; return; }
+  // avoid clobbering active text inputs on live updates
+  const ae = document.activeElement; const typing = ae && /INPUT|TEXTAREA|SELECT/.test(ae.tagName) && $('#v-'+S.route).contains(ae);
+  if (!force && typing && lastRoute === S.route && ['tiep-don','kham-benh','benh-nhan','thuoc','cai-dat'].includes(S.route)){ softUpdate(); return; }
+  lastRoute = S.route;
+  ({ 'tiep-don':rTiepDon, 'kham-benh':rKham, 'soan-thuoc':rSoan, 'trong-ngay':rTrongNgay, 'benh-nhan':rBenhNhan, 'thuoc':rThuoc, 'thong-ke':rThongKe, 'cai-dat':rCaiDat })[S.route]();
+}
+function softUpdate(){ // refresh only list parts while the user is typing
+  if (S.route === 'tiep-don'){ const el = $('#tdList'); if (el) el.innerHTML = tdListHTML(); bindTdList(); }
+  if (S.route === 'kham-benh'){ const el = $('#khQueue'); if (el){ el.innerHTML = khQueueHTML(); bindKhQueue(); } }
+}
+
+/* ================= TIẾP ĐÓN ================= */
+function patientLine(p){ return [p.namSinh, p.diaChi, p.dienThoai].filter(Boolean).join(' · '); }
+function searchPatients(q, limit=8){
+  const n = norm(q); if (!n) return [];
+  const toks = n.split(' ');
+  const out = [];
+  for (const p of S.patients.values()){
+    const hay = p._k || (p._k = norm([p.ten, p.namSinh, p.diaChi, p.dienThoai, p.ma].join(' ')));
+    if (toks.every(t => hay.includes(t))) { out.push(p); }
+  }
+  out.sort((a,b) => String(b.lanCuoi||'').localeCompare(String(a.lanCuoi||'')) || String(a.ten).localeCompare(String(b.ten),'vi'));
+  return out.slice(0, limit);
+}
+const PFIELDS = [['ten','Họ tên *'],['namSinh','Năm sinh'],['diaChi','Địa chỉ'],['dienThoai','Điện thoại'],['luuY','Lưu ý'],['tienSu','Tiền sử'],['diUng','Dị ứng']];
+function rTiepDon(){
+  const el = $('#v-tiep-don'); const p = S.pickPat;
+  el.innerHTML = `<div class="cols c-reception">
+    <div class="card">
+      <h2>Phát số thứ tự <span class="hint">${esc(dayName(S.day))} ${viDate(S.day)}</span></h2>
+      <div class="field ac"><label for="tdQ">Bệnh nhân cũ — tìm theo tên, năm sinh, SĐT, mã</label>
+        <input type="search" id="tdQ" placeholder="VD: hoa 1955" autocomplete="off"><div class="ac-list" id="tdAc"></div></div>
+      ${p && p.ma ? `<div class="flag" style="margin-bottom:10px">Đang chọn: <b>${esc(p.ma)}</b> ${p.lanCuoi?`· khám gần nhất ${viDate(p.lanCuoi)}`:''} <button class="btn sm" id="tdClear" style="margin-left:6px">Bệnh nhân mới</button></div>` : `<div class="sm" style="margin:-4px 0 10px">Bệnh nhân mới: điền thẳng thông tin bên dưới. Mã BN được tạo tự động.</div>`}
+      <div class="f3"><div class="field"><label>${PFIELDS[0][1]}</label><input type="text" id="tdF-ten" value="${esc(p?.ten)}"></div>
+      <div class="field"><label>Năm sinh</label><input type="text" id="tdF-namSinh" inputmode="numeric" value="${esc(p?.namSinh)}"></div></div>
+      <div class="field"><label>Địa chỉ</label><input type="text" id="tdF-diaChi" value="${esc(p?.diaChi)}"></div>
+      <div class="f2"><div class="field"><label>Điện thoại</label><input type="tel" id="tdF-dienThoai" value="${esc(p?.dienThoai)}"></div>
+      <div class="field"><label>Lưu ý</label><input type="text" id="tdF-luuY" value="${esc(p?.luuY)}"></div></div>
+      <div class="f2"><div class="field"><label>Tiền sử</label><input type="text" id="tdF-tienSu" value="${esc(p?.tienSu)}"></div>
+      <div class="field"><label>Dị ứng</label><input type="text" id="tdF-diUng" value="${esc(p?.diUng)}"></div></div>
+      <div class="sm bad" id="tdErr"></div>
+      <div class="actions"><button class="btn primary big" id="tdGo" style="width:100%">Phát số</button></div>
+    </div>
+    <div class="card">
+      <h2>Danh sách trong ngày <span class="sp"></span>
+        <div class="seg" id="tdSeg"><button data-v="all">Tất cả</button><button data-v="cho-kham">Chờ khám</button><button data-v="cho-soan">Chờ soạn</button><button data-v="xong">Đã xong</button></div></h2>
+      <div id="tdList">${tdListHTML()}</div>
+    </div></div>`;
+  const q = $('#tdQ'), ac = $('#tdAc'); let idx = 0, res = [];
+  const draw = () => { ac.innerHTML = res.map((p,i) => `<div class="ac-it ${i===idx?'on':''}" data-i="${i}"><div><b>${esc(p.ten)}</b> <span class="m">${esc(patientLine(p))}</span></div><div class="m">${esc(p.ma)}${p.lanCuoi?' · '+viDate(p.lanCuoi):''}</div></div>`).join('') || (q.value.trim()?'<div class="ac-it"><span class="m">Không tìm thấy — điền thông tin để tạo bệnh nhân mới</span></div>':''); ac.classList.toggle('show', !!q.value.trim()); };
+  q.oninput = () => { res = searchPatients(q.value); idx = 0; draw(); };
+  q.onkeydown = e => { if (e.key==='ArrowDown'){ idx=Math.min(idx+1,res.length-1); draw(); e.preventDefault(); } else if (e.key==='ArrowUp'){ idx=Math.max(idx-1,0); draw(); e.preventDefault(); } else if (e.key==='Enter' && res[idx]){ pick(res[idx]); e.preventDefault(); } };
+  q.onblur = () => setTimeout(()=> ac.classList.remove('show'), 150);
+  ac.onmousedown = e => { const it = e.target.closest('[data-i]'); if (it) pick(res[+it.dataset.i]); };
+  function pick(p){ S.pickPat = Object.assign({}, p); rTiepDon(); $('#tdGo').focus(); }
+  const cl = $('#tdClear'); if (cl) cl.onclick = () => { S.pickPat = null; rTiepDon(); $('#tdF-ten').focus(); };
+  $$('#tdSeg button').forEach(b => { b.classList.toggle('on', b.dataset.v === S.tdFilter); b.onclick = () => { S.tdFilter = b.dataset.v; $('#tdList').innerHTML = tdListHTML(); bindTdList(); $$('#tdSeg button').forEach(x => x.classList.toggle('on', x.dataset.v===S.tdFilter)); }; });
+  $('#tdGo').onclick = phatSo;
+  bindTdList();
+}
+function tdListHTML(){
+  const list = S.visits.filter(v => S.tdFilter==='all' || v.trangThai===S.tdFilter || (S.tdFilter==='cho-kham' && v.trangThai==='dang-kham'));
+  if (!S.dayLoaded && S.db && !S.db._local) return '<div class="empty">Đang tải…</div>';
+  if (!list.length) return `<div class="empty"><h3>Chưa có bệnh nhân</h3><p>Phát số cho bệnh nhân đầu tiên ở khung bên trái.</p></div>`;
+  return `<div class="scroll tall"><table><thead><tr><th>STT</th><th>Họ tên</th><th>NS</th><th class="hide-s">Địa chỉ</th><th>Giờ đến</th><th>Trạng thái</th><th class="r">Tổng tiền</th><th></th></tr></thead><tbody>
+    ${list.map(v => `<tr><td class="num"><b>${pad(v.stt,3)}</b></td><td><b>${esc(v.ten)}</b><div class="sm">${esc(v.maBN||'')}</div></td><td class="num">${esc(v.namSinh)}</td><td class="hide-s sm">${esc(v.diaChi)}</td><td class="num sm">${hhmm(v.gioDen)}</td><td>${chip(v.trangThai)}${v.bacSi&&v.trangThai!=='cho-kham'?`<div class="sm">${esc(v.bacSi)}</div>`:''}</td><td class="r num">${v.tongTien?fmt(v.tongTien):''}</td>
+    <td class="r" style="white-space:nowrap">${v.trangThai==='cho-kham'?`<button class="btn sm" data-edit="${esc(v.id)}">Sửa</button> <button class="btn sm danger" data-del="${esc(v.id)}">Hủy số</button>`:''}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+function bindTdList(){
+  $$('#tdList [data-del]').forEach(b => b.onclick = async () => { const v = S.visits.find(x => x.id === b.dataset.del); if (!v) return; if (!(await confirmBox('Hủy số thứ tự?', `Số ${pad(v.stt,3)} - ${v.ten} sẽ bị xóa khỏi danh sách hôm nay.`, 'Hủy số'))) return; try { await withRetry(()=> S.db.collection(visitPath(v.ngay)).doc(v.id).delete()); toast('Đã hủy số.'); } catch(e){ toast(errMsg(e)); } });
+  $$('#tdList [data-edit]').forEach(b => b.onclick = () => { const v = S.visits.find(x => x.id === b.dataset.edit); if (v) editPatientModal(v.maBN, v); });
+}
+async function phatSo(){
+  const g = k => ($('#tdF-'+k)?.value || '').trim();
+  const info = {}; PFIELDS.forEach(([k]) => info[k] = g(k));
+  if (!info.ten){ $('#tdErr').textContent = 'Vui lòng nhập họ tên.'; $('#tdF-ten').focus(); return; }
+  const btn = $('#tdGo'); btn.disabled = true; $('#tdErr').textContent = '';
+  try {
+    let ma = S.pickPat && S.pickPat.ma;
+    if (ma && S.visits.some(v => v.maBN === ma) && !(await confirmBox('Bệnh nhân đã có số hôm nay', `${info.ten} đã được phát số trong ngày. Vẫn phát thêm số mới?`, 'Phát thêm'))){ btn.disabled = false; return; }
+    if (!ma){ ma = await nextMaBN(); }
+    const old = S.patients.get(ma) || {};
+    const p = Object.assign({}, old, info, {ma}); delete p._k; if (!p.taoLuc) p.taoLuc = new Date().toISOString();
+    await savePatient(p);
+    const stt = await nextSTT(S.day);
+    const v = { id: uid(), ngay: S.day, stt, maBN: ma, ten:p.ten, namSinh:p.namSinh||'', diaChi:p.diaChi||'', dienThoai:p.dienThoai||'', luuY:p.luuY||'', tienSu:p.tienSu||'', diUng:p.diUng||'', trangThai:'cho-kham', gioDen:new Date().toISOString(), bacSi:'', chanDoan:'', ghiChu:'', thuoc:[], tongTien:0 };
+    await saveVisit(v);
+    S.pickPat = null; rTiepDon(); $('#tdQ').focus();
+    toast(`Số ${pad(stt,3)} — ${p.ten}`, true);
+  } catch(e){ console.error(e); $('#tdErr').textContent = errMsg(e); }
+  finally { const b = $('#tdGo'); if (b) b.disabled = false; }
+}
+function editPatientModal(ma, visit){
+  const p = S.patients.get(ma) || (visit ? {ma, ten:visit.ten, namSinh:visit.namSinh, diaChi:visit.diaChi, dienThoai:visit.dienThoai, luuY:visit.luuY, tienSu:visit.tienSu, diUng:visit.diUng} : null);
+  if (!p) return;
+  const m = openModal(`<h3>Hồ sơ bệnh nhân ${esc(ma)}</h3>
+    ${PFIELDS.map(([k,l]) => `<div class="field"><label>${l}</label><input type="text" data-k="${k}" value="${esc(p[k])}"></div>`).join('')}
+    <div class="sm bad" id="epErr"></div>
+    <div class="actions"><button class="btn" data-a="no">Hủy</button><button class="btn primary" data-a="ok">Lưu</button></div>`);
+  m.querySelector('[data-a=no]').onclick = closeModal;
+  m.querySelector('[data-a=ok]').onclick = async () => {
+    const np = Object.assign({}, p); $$('[data-k]', m).forEach(i => np[i.dataset.k] = i.value.trim()); delete np._k;
+    if (!np.ten){ $('#epErr').textContent = 'Cần họ tên.'; return; }
+    try {
+      await savePatient(np);
+      // sync today's visits that are not finished
+      for (const v of S.visits.filter(x => x.maBN === ma && x.trangThai !== 'xong')){
+        await patchVisit(v, {ten:np.ten, namSinh:np.namSinh||'', diaChi:np.diaChi||'', dienThoai:np.dienThoai||'', luuY:np.luuY||'', tienSu:np.tienSu||'', diUng:np.diUng||''});
+      }
+      closeModal(); toast('Đã lưu hồ sơ.'); scheduleRender();
+    } catch(e){ $('#epErr').textContent = errMsg(e); }
+  };
+}
+
+/* ================= KHÁM BỆNH ================= */
+function khQueueHTML(){
+  const wait = S.visits.filter(v => v.trangThai === 'cho-kham');
+  const doing = S.visits.filter(v => v.trangThai === 'dang-kham');
+  const done = S.visits.filter(v => v.trangThai === 'cho-soan' || v.trangThai === 'xong');
+  const it = v => `<div class="qi ${S.selKham===v.id?'on':''}" data-v="${esc(v.id)}"><div class="stt num">${pad(v.stt,3)}</div><div class="grow"><div class="nm">${esc(v.ten)}</div><div class="meta">${esc(v.namSinh)}${v.trangThai==='dang-kham'?' · '+esc(v.bacSi||'đang khám'):''}${v.trangThai==='cho-soan'||v.trangThai==='xong'?' · '+fmt(v.tongTien):''}</div></div></div>`;
+  return `<div class="qh"><span>Chờ khám</span><span>${wait.length}</span></div><div class="q">${wait.map(it).join('') || '<div class="sm">Không có bệnh nhân chờ.</div>'}</div>
+    ${doing.length?`<div class="qh"><span>Đang khám</span><span>${doing.length}</span></div><div class="q">${doing.map(it).join('')}</div>`:''}
+    <details ${S.selKham && done.some(v=>v.id===S.selKham)?'open':''}><summary class="qh" style="cursor:pointer">Đã khám — sửa lại (${done.length})</summary><div class="q">${done.map(it).join('')}</div></details>`;
+}
+function bindKhQueue(){ $$('#khQueue [data-v]').forEach(d => d.onclick = () => openExam(d.dataset.v)); }
+function rKham(){
+  const el = $('#v-kham-benh');
+  const docs = S.settings.bacSi || [];
+  el.innerHTML = `<div class="cols c-exam">
+    <div><div class="card sticky">
+      <div class="field"><label for="khBS">Bác sĩ khám</label><select id="khBS"><option value="">— Chọn bác sĩ —</option>${docs.map(d => `<option ${d===S.bacSi?'selected':''}>${esc(d)}</option>`).join('')}${S.bacSi && !docs.includes(S.bacSi)?`<option selected>${esc(S.bacSi)}</option>`:''}</select></div>
+      <div id="khQueue">${khQueueHTML()}</div></div></div>
+    <div id="khMain">${khMainHTML()}</div></div>`;
+  $('#khBS').onchange = e => { S.bacSi = e.target.value; lsSet('pk-bacsi', S.bacSi); };
+  bindKhQueue(); bindKhMain();
+}
+function khMainHTML(){
+  const d = S.draft;
+  if (!d) return `<div class="card empty"><h3>Chọn bệnh nhân ở danh sách bên trái</h3><p>Bệnh nhân "Chờ khám" theo số thứ tự. Bấm vào bệnh nhân đã khám để sửa lại toa.</p></div>`;
+  const v = S.visits.find(x => x.id === d.id) || d;
+  const p = S.patients.get(d.maBN) || v;
+  const warn = s => s && !/^(khong|k|ko|0|-|none)$/.test(norm(s));
+  const total = d.thuoc.reduce((a,l) => a + (+l.tien||0), 0) + (+d.phuThu||0);
+  return `<div class="card" style="margin-bottom:14px">
+    <div class="ph"><div class="grow"><div class="stt">Số ${pad(v.stt,3)} · ${esc(v.maBN||'')} · ${chip(v.trangThai)}</div>
+      <div class="big">${esc(p.ten)} <span class="muted" style="font-weight:500;font-size:15px">${esc(p.namSinh)}${tuoi(p.namSinh)!==''?` (${tuoi(p.namSinh)} tuổi)`:''}</span></div>
+      <div class="muted">${esc([p.diaChi, p.dienThoai].filter(Boolean).join(' · '))}</div></div>
+      <button class="btn sm" id="khEditP">Sửa hồ sơ</button></div>
+    <div class="flags">
+      <div class="flag ${warn(p.diUng)?'warn':''}"><b>Dị ứng:</b>${esc(p.diUng||'—')}</div>
+      <div class="flag ${warn(p.tienSu)?'warn':''}"><b>Tiền sử:</b>${esc(p.tienSu||'—')}</div>
+      ${p.luuY?`<div class="flag"><b>Lưu ý:</b>${esc(p.luuY)}</div>`:''}
+    </div></div>
+  <div class="card" style="margin-bottom:14px"><h2>Các lần khám trước <span class="hint">3 lần gần nhất</span><span class="sp"></span><a href="#benh-nhan" id="khAllHist" class="sm">Xem tất cả</a></h2><div id="khHist"><div class="sm">Đang tải…</div></div></div>
+  <div class="card">
+    <h2>Khám & kê đơn <span class="hint">${esc(dayName(v.ngay))} ${viDate(v.ngay)}</span></h2>
+    <div class="f2"><div class="field"><label for="khCD">Chẩn đoán</label><input type="text" id="khCD" value="${esc(d.chanDoan)}" placeholder="VD: TK tọa P - dãn TMCD"></div>
+    <div class="field"><label for="khGC">Ghi chú lần khám này (CLS)</label><input type="text" id="khGC" value="${esc(d.ghiChu)}"></div></div>
+    <div class="field ac" style="max-width:560px"><label for="khAdd">Thêm thuốc / dịch vụ — gõ tên, Enter để chọn</label><input type="search" id="khAdd" placeholder="VD: medrol, depo, ocid…" autocomplete="off"><div class="ac-list" id="khAc"></div></div>
+    <div class="scroll"><table class="rx"><thead><tr><th>Tên thuốc / dịch vụ</th><th>Số lượng</th><th>Đơn giá</th><th class="r">Tiền</th><th>Cách dùng</th><th>Buổi</th><th>Mỗi lần</th><th>Số ngày</th><th>Lưu ý</th><th></th></tr></thead>
+    <tbody id="rxBody">${rxRowsHTML()}</tbody></table></div>
+    <div class="total" style="flex-wrap:wrap"><span class="muted">Cộng các dòng</span><span class="num" id="rxSum">${money(total - (+d.phuThu||0))}</span></div>
+    <div class="total" style="flex-wrap:wrap;padding-top:6px"><label class="check"><input type="checkbox" id="ptOn" ${d.ptOn?'checked':''}> Cộng thêm</label><input type="text" id="ptTien" class="num" inputmode="numeric" value="${fmt(d.ptTien)}" style="width:110px;text-align:right" ${d.ptOn?'':'disabled'}><input type="text" id="ptLyDo" placeholder="Lý do (không bắt buộc)" value="${esc(d.ptLyDo)}" style="width:200px" ${d.ptOn?'':'disabled'}></div>
+    <div class="total" style="padding-top:4px"><span class="muted">Tổng tiền</span><b class="num" id="rxTotal">${money(total)}</b></div>
+    <div class="sm bad" id="khErr" style="text-align:right"></div>
+    <div class="actions"><button class="btn left danger" id="khCancel">${v.trangThai==='dang-kham'?'Trả về hàng chờ':'Đóng'}</button><button class="btn" id="khSave">Lưu tạm</button><button class="btn primary big" id="khSend">Gửi soạn thuốc</button></div>
+  </div>`;
+}
+function rxRowsHTML(){
+  const d = S.draft; if (!d.thuoc.length) return `<tr><td colspan="10" class="sm" style="padding:14px">Chưa có dòng nào.</td></tr>`;
+  return d.thuoc.map((l,i) => `<tr data-i="${i}">
+    <td><input type="text" data-f="ten" value="${esc(l.ten)}" style="min-width:200px"></td>
+    <td><input type="text" class="w-sl num" data-f="sl" inputmode="decimal" value="${fmtQ(l.sl)}"></td>
+    <td><input type="text" class="w-gia num" data-f="donGia" inputmode="numeric" value="${fmt(l.donGia)}"></td>
+    <td class="tien"><input type="text" class="w-tien num ${l.tienSua?'edited':''}" data-f="tien" inputmode="numeric" value="${fmt(l.tien)}" title="${l.tienSua?'Tiền đã sửa tay (không tự tính theo SL × đơn giá)':'= Số lượng × Đơn giá'}" style="text-align:right"></td>
+    <td><input type="text" data-f="cachDung" value="${esc(l.cachDung)}" style="min-width:150px"></td>
+    <td><input type="text" data-f="buoi" value="${esc(l.buoi)}" style="min-width:110px" list="dlBuoi"></td>
+    <td><input type="text" class="w-ml" data-f="moiLan" value="${esc(l.moiLan)}"></td>
+    <td><input type="text" class="w-nd num" data-f="soNgay" inputmode="numeric" value="${esc(l.soNgay)}"></td>
+    <td><input type="text" data-f="luuY" value="${esc(l.luuY)}" style="min-width:110px"></td>
+    <td><button class="xbtn" data-x="${i}" title="Xóa dòng">×</button></td></tr>`).join('') + `<datalist id="dlBuoi"><option>Sáng</option><option>Chiều</option><option>Tối</option><option>Sáng, Chiều</option><option>Sáng, Tối</option><option>Sáng, Chiều, Tối</option></datalist>`;
+}
+function recalcLine(l, f){
+  if (['buoi','moiLan','soNgay'].includes(f)){
+    const n = soLanTrongNgay(l.buoi), ml = parseQty(l.moiLan), nd = parseQty(l.soNgay);
+    if (n && ml && nd) l.sl = Math.round(n*ml*nd*100)/100;
+  }
+  if (f === 'tien'){ l.tienSua = Math.round(+l.tien||0) !== Math.round((+l.sl||0)*(+l.donGia||0)); return; }
+  if (['sl','donGia','buoi','moiLan','soNgay'].includes(f)){ l.tienSua = false; l.tien = Math.round((+l.sl||0)*(+l.donGia||0)); }
+}
+function drugToLine(t){
+  const sl = parseQty(t.sl) || 1; const dg = +t.donGia || (sl ? Math.round((+t.tien||0)/sl) : (+t.tien||0));
+  const tien = (+t.tien > 0) ? Math.round(+t.tien) : Math.round(sl*dg); // giá của mẫu kê trong danh mục (như cột Tiền của file cũ)
+  return { ten:t.ten, thuocId:t.id, sl, donGia:dg, tien, tienSua: tien !== Math.round(sl*dg), cachDung:t.cachDung||'', buoi:t.buoi||'', moiLan:t.moiLan||'', soNgay:t.soNgay||'', luuY:t.luuY||'' };
+}
+function searchDrugs(q){
+  const n = norm(q); if (!n) return []; const toks = n.split(' ');
+  return S.drugs.filter(t => { const h = t._k || (t._k = norm(t.ten + ' ' + (t.ghiChu||'') + ' ' + (t.buoi||''))); return toks.every(x => h.includes(x)); }).slice(0, 14);
+}
+function bindKhMain(){
+  const d = S.draft; if (!d) return;
+  loadHistory(d.maBN, d.id);
+  $('#khEditP').onclick = () => editPatientModal(d.maBN, S.visits.find(x=>x.id===d.id));
+  $('#khAllHist').onclick = () => { S.bnSearch = d.maBN; };
+  $('#khCD').oninput = e => d.chanDoan = e.target.value;
+  $('#khGC').oninput = e => d.ghiChu = e.target.value;
+  const syncPT = () => { d.phuThu = d.ptOn ? (+d.ptTien||0) : 0; $('#ptTien').disabled = $('#ptLyDo').disabled = !d.ptOn; updTotal(); };
+  $('#ptOn').onchange = e => { d.ptOn = e.target.checked; lsSet('pk-phuthu-on', d.ptOn ? '1' : '0'); syncPT(); };
+  $('#ptTien').oninput = e => { d.ptTien = parseAmount(e.target.value); syncPT(); };
+  $('#ptTien').onblur = e => { e.target.value = fmt(d.ptTien); };
+  $('#ptLyDo').oninput = e => { d.ptLyDo = e.target.value; };
+  const add = $('#khAdd'), ac = $('#khAc'); let idx = 0, res = [];
+  const draw = () => { ac.innerHTML = res.map((t,i) => `<div class="ac-it ${i===idx?'on':''} ${t.het?'het':''}" data-i="${i}"><div><b>${esc(t.ten)}</b>${t.het?'<span class="tag red">hết</span>':''}${t.ghiChu&&!t.het?`<span class="tag">${esc(t.ghiChu)}</span>`:''}<div class="m">${esc([t.cachDung,t.buoi,t.moiLan,t.soNgay?t.soNgay+' ngày':''].filter(Boolean).join(' · '))}</div></div><div class="m num" style="text-align:right">SL ${fmtQ(t.sl)}<br>${fmt(t.tien)}</div></div>`).join('') || (add.value.trim() ? `<div class="ac-it" data-free="1"><span>Thêm "<b>${esc(add.value.trim())}</b>" (không có trong danh mục)</span></div>` : ''); ac.classList.toggle('show', !!add.value.trim()); };
+  add.oninput = () => { res = searchDrugs(add.value); idx = 0; draw(); };
+  add.onkeydown = e => {
+    if (e.key==='ArrowDown'){ idx=Math.min(idx+1,res.length-1); draw(); e.preventDefault(); }
+    else if (e.key==='ArrowUp'){ idx=Math.max(idx-1,0); draw(); e.preventDefault(); }
+    else if (e.key==='Enter'){ e.preventDefault(); if (res[idx]) pickDrug(res[idx]); else if (add.value.trim()) pickFree(add.value.trim()); }
+  };
+  add.onblur = () => setTimeout(()=> ac.classList.remove('show'), 150);
+  ac.onmousedown = e => { const it = e.target.closest('[data-i]'); if (it) pickDrug(res[+it.dataset.i]); else if (e.target.closest('[data-free]')) pickFree(add.value.trim()); };
+  function pickDrug(t){ d.thuoc.push(drugToLine(t)); redrawRx(); add.value=''; ac.classList.remove('show'); add.focus(); }
+  function pickFree(name){ d.thuoc.push({ten:name, sl:1, donGia:0, tien:0, tienSua:false, cachDung:'', buoi:'', moiLan:'', soNgay:'', luuY:''}); redrawRx(); add.value=''; ac.classList.remove('show'); }
+  bindRx();
+  $('#khCancel').onclick = cancelExam;
+  $('#khSave').onclick = () => saveExam(false);
+  $('#khSend').onclick = () => saveExam(true);
+}
+function redrawRx(){ $('#rxBody').innerHTML = rxRowsHTML(); bindRx(); updTotal(); }
+function updTotal(){ const t = S.draft.thuoc.reduce((a,l)=>a+(+l.tien||0),0); $('#rxSum').textContent = money(t); $('#rxTotal').textContent = money(t + (+S.draft.phuThu||0)); }
+function bindRx(){
+  const d = S.draft;
+  $$('#rxBody tr[data-i]').forEach(tr => {
+    const l = d.thuoc[+tr.dataset.i];
+    $$('input[data-f]', tr).forEach(inp => {
+      const f = inp.dataset.f;
+      inp.oninput = () => {
+        const raw = inp.value;
+        if (f==='sl') l.sl = parseQty(raw); else if (f==='donGia') l.donGia = parseAmount(raw); else if (f==='tien') l.tien = parseAmount(raw); else l[f] = raw;
+        recalcLine(l, f);
+        if (f!=='tien'){ const ti = $('input[data-f=tien]', tr); ti.value = fmt(l.tien); ti.classList.toggle('edited', !!l.tienSua); }
+        else inp.classList.toggle('edited', !!l.tienSua);
+        if (['buoi','moiLan','soNgay'].includes(f)) $('input[data-f=sl]', tr).value = fmtQ(l.sl);
+        updTotal();
+      };
+      inp.onblur = () => { if (f==='donGia') inp.value = fmt(l.donGia); if (f==='tien') inp.value = fmt(l.tien); if (f==='sl') inp.value = fmtQ(l.sl); };
+    });
+  });
+  $$('#rxBody [data-x]').forEach(b => b.onclick = () => { d.thuoc.splice(+b.dataset.x, 1); redrawRx(); });
+}
+async function loadHistory(ma, curId){
+  const box = $('#khHist'); if (!box) return;
+  const p = S.patients.get(ma);
+  const refs = (p && Array.isArray(p.lk) ? p.lk : []).filter(r => !r.endsWith('/'+curId)).slice().sort().reverse().slice(0,3);
+  if (!refs.length){ box.innerHTML = '<div class="sm">Chưa có lần khám nào trước đây.</div>'; return; }
+  try {
+    const vs = (await Promise.all(refs.map(getVisitByRef))).filter(Boolean);
+    if (!$('#khHist') || !S.draft || S.draft.maBN !== ma) return;
+    $('#khHist').innerHTML = `<div class="hist">${vs.map((v,i) => `<div class="hc"><div class="row"><span class="d">${viDate(v.ngay)}</span><span class="sm grow">${esc(v.bacSi||'')}</span><b class="num">${fmt(v.tongTien)}</b></div>
+      <div><b>CĐ:</b> ${esc(v.chanDoan||'—')}</div>${v.ghiChu?`<div class="sm">${esc(v.ghiChu)}</div>`:''}
+      <ul>${(v.thuoc||[]).filter(l=>!/^kham benh$/.test(norm(l.ten))).map(l => `<li>${esc(l.ten)} — <span class="num">${fmtQ(l.sl)}</span>${l.buoi?` <span class="sm">(${esc(l.buoi)})</span>`:''}${l.luuY?` <span class="sm">${esc(l.luuY)}</span>`:''}</li>`).join('')}</ul>
+      <button class="btn sm" data-reuse="${i}">Dùng lại toa này</button></div>`).join('')}</div>`;
+    $$('#khHist [data-reuse]').forEach(b => b.onclick = () => {
+      const v = vs[+b.dataset.reuse]; const d = S.draft;
+      const keepFee = d.thuoc.filter(l => /^kham benh$/.test(norm(l.ten)));
+      const lines = (v.thuoc||[]).filter(l => !/^kham benh$/.test(norm(l.ten))).map(l => {
+        const cat = S.drugs.find(t => t.id === l.thuocId) || S.drugs.find(t => norm(t.ten) === norm(l.ten) && +t.sl === +l.sl) || S.drugs.find(t => norm(t.ten) === norm(l.ten));
+        const nl = Object.assign({}, l); if (cat && !l.tienSua){ nl.donGia = +cat.donGia || nl.donGia; nl.tien = Math.round(nl.sl*nl.donGia); }
+        return nl;
+      });
+      d.thuoc = keepFee.concat(lines); if (!d.chanDoan) { d.chanDoan = v.chanDoan || ''; $('#khCD').value = d.chanDoan; }
+      redrawRx(); toast('Đã chép toa ngày ' + viDate(v.ngay) + ' (giá theo danh mục hiện tại).');
+    });
+  } catch(e){ console.error(e); box.innerHTML = '<div class="sm bad">Không tải được lịch sử.</div>'; }
+}
+async function openExam(id){
+  const v = S.visits.find(x => x.id === id); if (!v) return;
+  if (S.draft && S.draft.id !== id && S.draft._dirty !== false){ /* switching: drafts are not auto-saved */ }
+  if (v.trangThai === 'dang-kham' && v.bacSi && S.bacSi && v.bacSi !== S.bacSi){
+    if (!(await confirmBox('Bệnh nhân đang được khám', `${v.ten} đang được ${v.bacSi} khám. Vẫn mở?`, 'Vẫn mở'))) return;
+  }
+  if (!S.bacSi){ toast('Hãy chọn bác sĩ khám trước.'); $('#khBS')?.focus(); return; }
+  S.selKham = id;
+  const thuoc = (v.thuoc && v.thuoc.length) ? JSON.parse(JSON.stringify(v.thuoc)) : [];
+  if (!thuoc.length && (+S.settings.phiKham||0) > 0) thuoc.push({ten:'Khám bệnh', sl:1, donGia:+S.settings.phiKham, tien:+S.settings.phiKham, tienSua:false, cachDung:'', buoi:'', moiLan:'', soNgay:'', luuY:''});
+  S.draft = { id:v.id, ngay:v.ngay, maBN:v.maBN, chanDoan:v.chanDoan||'', ghiChu:v.ghiChu||'', thuoc, prevStatus:v.trangThai };
+  if (v.thuoc && v.thuoc.length){ S.draft.ptOn = +v.phuThu > 0; S.draft.ptTien = +v.phuThu || +S.settings.phuThu || 0; S.draft.ptLyDo = v.phuThuLyDo || ''; }
+  else { const last = lsGet('pk-phuthu-on'); S.draft.ptOn = last == null ? !!S.settings.phuThuMacDinh : last === '1'; S.draft.ptTien = +S.settings.phuThu || 0; S.draft.ptLyDo = ''; }
+  S.draft.phuThu = S.draft.ptOn ? S.draft.ptTien : 0;
+  if (v.trangThai === 'cho-kham'){ try { await patchVisit(v, {trangThai:'dang-kham', bacSi:S.bacSi, gioKham:new Date().toISOString()}); } catch(e){ toast(errMsg(e)); } }
+  rKham(); window.scrollTo({top:0, behavior:'smooth'});
+}
+async function cancelExam(){
+  const d = S.draft; if (!d) return; const v = S.visits.find(x => x.id === d.id);
+  if (v && v.trangThai === 'dang-kham'){ try { await patchVisit(v, {trangThai:'cho-kham'}); } catch(e){} }
+  S.draft = null; S.selKham = null; rKham();
+}
+async function saveExam(send){
+  const d = S.draft; const v = S.visits.find(x => x.id === d.id); if (!v) return;
+  d.thuoc = d.thuoc.filter(l => String(l.ten).trim());
+  if (send && !d.thuoc.length){ $('#khErr').textContent = 'Toa chưa có dòng nào.'; return; }
+  const tongTien = d.thuoc.reduce((a,l)=>a+(+l.tien||0),0) + (+d.phuThu||0);
+  const patch = { phuThu: +d.phuThu||0, phuThuLyDo: d.phuThu ? String(d.ptLyDo||'').trim() : '', chanDoan:d.chanDoan.trim(), ghiChu:d.ghiChu.trim(), thuoc:d.thuoc, tongTien, bacSi:S.bacSi || v.bacSi || '', gioKham: v.gioKham || new Date().toISOString() };
+  if (send){ patch.trangThai = 'cho-soan'; patch.gioGui = new Date().toISOString(); }
+  const btns = $$('#khMain .actions button'); btns.forEach(b => b.disabled = true);
+  try {
+    await patchVisit(v, patch);
+    S.histCache.delete(`${v.ngay}/${v.id}`);
+    if (send){ await linkVisitToPatient(Object.assign({}, v, patch)); toast(`Đã gửi soạn thuốc: ${pad(v.stt,3)} ${v.ten} — ${money(tongTien)}`); S.draft = null; S.selKham = null; rKham();
+      const nx = S.visits.find(x => x.trangThai === 'cho-kham'); if (nx) setTimeout(()=>{ $$('#khQueue [data-v]').find(q => q.dataset.v === nx.id)?.classList.add('on'); }, 50);
+    } else toast('Đã lưu tạm.');
+  } catch(e){ console.error(e); const er = $('#khErr'); if (er) er.textContent = errMsg(e); }
+  finally { btns.forEach(b => b.disabled = false); }
+}
+
+/* ================= SOẠN THUỐC ================= */
+const picked = new Map(); // visitId -> Set of line idx (per device)
+function rSoan(){
+  const el = $('#v-soan-thuoc');
+  const wait = S.visits.filter(v => v.trangThai === 'cho-soan');
+  const done = S.visits.filter(v => v.trangThai === 'xong');
+  if (S.selSoan && !S.visits.some(v => v.id === S.selSoan)) S.selSoan = null;
+  if (!S.selSoan && wait.length) S.selSoan = wait[0].id;
+  const v = S.visits.find(x => x.id === S.selSoan);
+  const it = x => `<div class="qi ${S.selSoan===x.id?'on':''}" data-v="${esc(x.id)}"><div class="stt num">${pad(x.stt,3)}</div><div class="grow"><div class="nm">${esc(x.ten)}</div><div class="meta">${esc(x.namSinh)} · ${fmt(x.tongTien)}</div></div></div>`;
+  let main;
+  if (!v) main = `<div class="card empty"><h3>Không có toa chờ soạn</h3><p>Toa sẽ hiện ở đây ngay khi bác sĩ bấm "Gửi soạn thuốc".</p></div>`;
+  else {
+    const set = picked.get(v.id) || new Set();
+    main = `<div class="card">
+      <div class="ph"><div class="grow"><div class="stt">Số ${pad(v.stt,3)} · ${esc(v.maBN||'')} · ${chip(v.trangThai)}</div>
+        <div class="big">${esc(v.ten)} <span class="muted" style="font-weight:500;font-size:15px">${esc(v.namSinh)}</span></div>
+        <div class="muted">${esc([v.diaChi, v.dienThoai].filter(Boolean).join(' · '))}</div></div>
+        <div style="text-align:right"><div class="sm">Tổng tiền</div><div class="big num" style="font-size:26px">${money(v.tongTien)}</div></div></div>
+      <div class="flags"><div class="flag"><b>Chẩn đoán:</b>${esc(v.chanDoan||'—')}</div>${v.ghiChu?`<div class="flag"><b>Ghi chú:</b>${esc(v.ghiChu)}</div>`:''}<div class="flag"><b>Bác sĩ:</b>${esc(v.bacSi||'—')}</div>${v.diUng && !/^khong$/.test(norm(v.diUng))?`<div class="flag warn"><b>Dị ứng:</b>${esc(v.diUng)}</div>`:''}</div>
+      <div class="scroll" style="margin-top:12px"><table><thead><tr><th style="width:34px"></th><th>Tên thuốc / dịch vụ</th><th class="r">SL</th><th class="r">Tiền</th><th>Cách dùng</th><th>Buổi</th><th>Mỗi lần</th><th>Ngày</th><th>Lưu ý</th></tr></thead><tbody>
+      ${(v.thuoc||[]).map((l,i) => `<tr class="click ${set.has(i)?'dispensed':''}" data-li="${i}"><td><input type="checkbox" ${set.has(i)?'checked':''} aria-label="Đã soạn"></td><td><b>${esc(l.ten)}</b></td><td class="r num"><b>${fmtQ(l.sl)}</b></td><td class="r num">${fmt(l.tien)}</td><td>${esc(l.cachDung)}</td><td>${esc(l.buoi)}</td><td>${esc(l.moiLan)}</td><td class="num">${esc(l.soNgay)}</td><td>${esc(l.luuY)}</td></tr>`).join('')}
+      </tbody>${+v.phuThu?`<tfoot><tr><td></td><td class="muted">Cộng thêm${v.phuThuLyDo?' ('+esc(v.phuThuLyDo)+')':''}</td><td></td><td class="r num">${fmt(v.phuThu)}</td><td colspan="5"></td></tr></tfoot>`:''}</table></div>
+      <div class="actions" style="margin-top:14px">
+        <button class="btn left" id="soBack">Trả về bác sĩ</button>
+        <button class="btn" id="soPrint" ${S.dl?'':'disabled title="Tải file không khả dụng ở chế độ xem này"'}>⬇ Tải đơn thuốc để in</button>
+        ${v.trangThai==='xong' ? `<button class="btn" id="soUndo">Đánh dấu chưa xong</button>` : `<button class="btn primary big" id="soDone">Đã soạn xong & thu tiền</button>`}
+      </div></div>`;
+  }
+  el.innerHTML = `<div class="cols c-disp"><div class="card"><div class="qh" style="margin-top:0"><span>Chờ soạn thuốc</span><span>${wait.length}</span></div><div class="q">${wait.map(it).join('') || '<div class="sm">Trống.</div>'}</div>
+    <details><summary class="qh" style="cursor:pointer">Đã xong (${done.length})</summary><div class="q">${done.slice().reverse().map(it).join('')}</div></details></div><div>${main}</div></div>`;
+  $$('#v-soan-thuoc [data-v]').forEach(q => q.onclick = () => { S.selSoan = q.dataset.v; rSoan(); });
+  if (!v) return;
+  $$('#v-soan-thuoc tr[data-li]').forEach(tr => tr.onclick = () => { const s = picked.get(v.id) || new Set(); const i = +tr.dataset.li; s.has(i) ? s.delete(i) : s.add(i); picked.set(v.id, s); rSoan(); });
+  const dn = $('#soDone'); if (dn) dn.onclick = async () => { try { await patchVisit(v, {trangThai:'xong', gioXong:new Date().toISOString()}); toast(`Xong: ${pad(v.stt,3)} ${v.ten}`); S.selSoan = null; } catch(e){ toast(errMsg(e)); } };
+  const un = $('#soUndo'); if (un) un.onclick = async () => { try { await patchVisit(v, {trangThai:'cho-soan'}); } catch(e){ toast(errMsg(e)); } };
+  $('#soBack').onclick = async () => { if (!(await confirmBox('Trả toa về bác sĩ?', 'Toa sẽ chuyển về trạng thái "Đang khám" để bác sĩ sửa lại.', 'Trả về'))) return; try { await patchVisit(v, {trangThai:'dang-kham'}); S.selSoan = null; } catch(e){ toast(errMsg(e)); } };
+  $('#soPrint').onclick = () => printRx(v);
+}
+async function printRx(v){
+  if (!S.dl) return; const st = S.settings;
+  const rows = (v.thuoc||[]).map((l,i) => `<tr><td>${i+1}</td><td><b>${esc(l.ten)}</b>${l.cachDung||l.buoi?`<div class="u">${esc([l.cachDung, l.buoi?('buổi '+l.buoi):'', l.moiLan?('mỗi lần '+l.moiLan):'', l.soNgay?(l.soNgay+' ngày'):''].filter(Boolean).join(', '))}</div>`:''}${l.luuY?`<div class="u"><i>${esc(l.luuY)}</i></div>`:''}</td><td class="r">${fmtQ(l.sl)}</td><td class="r">${fmt(l.tien)}</td></tr>`).join('');
+  const html = `<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><title>Đơn thuốc ${esc(v.ten)}</title><style>body{font-family:Arial,sans-serif;font-size:14px;max-width:720px;margin:24px auto;color:#000}h1{text-align:center;font-size:20px;margin:16px 0}.hd{text-align:center}.hd b{font-size:16px}table{width:100%;border-collapse:collapse;margin-top:10px}td,th{border-bottom:1px solid #999;padding:6px;text-align:left;vertical-align:top}.r{text-align:right}.u{font-size:12.5px;color:#333}.sig{display:flex;justify-content:space-between;margin-top:28px}.sig div{text-align:center;width:45%}@media print{body{margin:0}}</style></head><body>
+  <div class="hd"><b>${esc(st.tenPK)}</b><br>${esc(st.diaChi||'')}${st.dienThoai?' — ĐT: '+esc(st.dienThoai):''}</div>
+  <h1>ĐƠN THUỐC</h1>
+  <p>Họ tên: <b>${esc(v.ten)}</b> &nbsp; Năm sinh: ${esc(v.namSinh)} &nbsp; Mã BN: ${esc(v.maBN||'')}<br>Địa chỉ: ${esc(v.diaChi||'')} ${v.dienThoai?'&nbsp; ĐT: '+esc(v.dienThoai):''}<br>Chẩn đoán: <b>${esc(v.chanDoan||'')}</b></p>
+  <table><thead><tr><th>#</th><th>Thuốc / dịch vụ — cách dùng</th><th class="r">SL</th><th class="r">Thành tiền</th></tr></thead><tbody>${rows}</tbody><tfoot>${+v.phuThu?`<tr><td></td><td class="r">Cộng thêm${v.phuThuLyDo?' ('+esc(v.phuThuLyDo)+')':''}</td><td></td><td class="r">${fmt(v.phuThu)}</td></tr>`:''}<tr><td></td><td class="r"><b>Tổng cộng</b></td><td></td><td class="r"><b>${fmt(v.tongTien)} đ</b></td></tr></tfoot></table>
+  <p><i>Lời dặn: ${esc(st.loiDan||'')}</i></p>
+  <div class="sig"><div>Ngày ${viDate(v.ngay)}<br><b>Người nhận thuốc</b><br><br><br></div><div>${esc(dayName(v.ngay))}, ${viDate(v.ngay)}<br><b>Bác sĩ khám</b><br><br><br><br>${esc(v.bacSi||'')}</div></div>
+  <script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>`;
+  try { await S.dl.save({filename:`Don-thuoc-${pad(v.stt,3)}-${norm(v.ten).replace(/\s+/g,'-')}-${v.ngay}.html`, data:html}); toast('Đã tải đơn thuốc. Mở file để in.'); }
+  catch(e){ if (!(e && e.code==='declined')) toast('Không tải được file (' + (e && e.code || 'lỗi') + ').'); }
+}
+
+/* ================= QUẢN LÝ TRONG NGÀY ================= */
+function canonName(t){ const s = String(t||'').trim(); const m = s.match(/^(.+?)\s*\[\s*([^\]]+?)\s*\]$/); return m ? `[${m[2]}] ${m[1].trim()}` : s.replace(/^\[\s*([^\]]+?)\s*\]\s*/, '[$1] '); }
+function drugUsage(visits){
+  const m = new Map();
+  for (const v of visits) for (const l of (v.thuoc||[])){ if (/^kham benh$/.test(norm(l.ten))) continue; const k = canonName(l.ten); const o = m.get(k) || {ten:k, sl:0, tien:0, n:0}; o.sl += +l.sl||0; o.tien += +l.tien||0; o.n++; m.set(k,o); }
+  return [...m.values()].sort((a,b) => b.sl - a.sl);
+}
+function rTrongNgay(){
+  const el = $('#v-trong-ngay'); const vs = S.visits;
+  const billed = vs.filter(v => v.trangThai==='cho-soan' || v.trangThai==='xong');
+  const total = billed.reduce((a,v)=>a+(+v.tongTien||0),0);
+  const fee = billed.reduce((a,v)=>a+(+v.phuThu||0)+(v.thuoc||[]).filter(l=>/^kham benh$/.test(norm(l.ten))).reduce((x,l)=>x+(+l.tien||0),0),0);
+  const usage = drugUsage(billed);
+  const cnt = s => vs.filter(v => v.trangThai===s).length;
+  el.innerHTML = `<div class="tiles">
+    <div class="card tile"><div class="lab">Số bệnh nhân</div><div class="val num">${fmt(vs.length)}</div><div class="note">${esc(dayName(S.day))} ${viDate(S.day)}</div></div>
+    <div class="card tile"><div class="lab">Tổng tiền (đã kê đơn)</div><div class="val num">${fmt(total)} <small>₫</small></div><div class="note">${fmt(billed.length)} toa · TB ${billed.length?fmt(total/billed.length):0} ₫/toa</div></div>
+    <div class="card tile"><div class="lab">Tiền khám + cộng thêm / thuốc & dịch vụ</div><div class="val num" style="font-size:18px">${fmt(fee)} / ${fmt(total-fee)}</div><div class="note">₫</div></div>
+    <div class="card tile"><div class="lab">Tiến độ</div><div class="val num" style="font-size:18px">${cnt('cho-kham')+cnt('dang-kham')} · ${cnt('cho-soan')} · ${cnt('xong')}</div><div class="note">chờ/đang khám · chờ soạn · đã xong</div></div>
+  </div>
+  <div class="cols c-day">
+    <div class="card"><h2>Danh sách lượt khám <span class="sp"></span><button class="btn sm" id="tnEx" ${S.dl?'':'disabled'}>⬇ Xuất Excel</button></h2>
+      ${vs.length ? `<div class="scroll tall"><table><thead><tr><th>STT</th><th>Mã BN</th><th>Họ tên</th><th>NS</th><th class="r">Tổng tiền</th><th>Bác sĩ</th><th>Chẩn đoán</th><th>Trạng thái</th></tr></thead><tbody>
+      ${vs.map(v => `<tr class="click" data-v="${esc(v.id)}"><td class="num">${pad(v.stt,3)}</td><td class="sm">${esc(v.maBN)}</td><td><b>${esc(v.ten)}</b></td><td class="num">${esc(v.namSinh)}</td><td class="r num">${v.tongTien?fmt(v.tongTien):''}</td><td class="sm">${esc(v.bacSi)}</td><td>${esc(v.chanDoan)}</td><td>${chip(v.trangThai)}</td></tr>`).join('')}
+      </tbody><tfoot><tr><td colspan="4"><b>Tổng</b></td><td class="r num"><b>${fmt(total)}</b></td><td colspan="3"></td></tr></tfoot></table></div>` : '<div class="empty">Chưa có lượt khám trong ngày này.</div>'}
+    </div>
+    <div class="card"><h2>Thuốc đã dùng trong ngày <span class="hint">tổng số lượng</span></h2>
+      ${usage.length ? `<div class="scroll tall"><table><thead><tr><th>Tên thuốc</th><th class="r">SL</th><th class="r">Tiền</th></tr></thead><tbody>${usage.map(u => `<tr><td>${esc(u.ten)}</td><td class="r num"><b>${fmtQ(u.sl)}</b></td><td class="r num sm">${fmt(u.tien)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="sm">Chưa có toa nào.</div>'}
+    </div></div>
+  <p class="sm" style="margin-top:12px">Dữ liệu được lưu ngay khi bác sĩ gửi toa — không cần bước “Lưu trữ thông tin cuối ngày” như trên Google Sheets. Đổi “Ngày làm việc” ở góc trên để xem lại các ngày trước.</p>`;
+  $$('#v-trong-ngay tr[data-v]').forEach(tr => tr.onclick = () => showVisitModal(S.visits.find(v => v.id === tr.dataset.v)));
+  $('#tnEx').onclick = () => exportDay(vs, usage);
+}
+function visitDetailHTML(v){
+  return `<div class="row" style="margin-bottom:6px"><b>${viDate(v.ngay)}</b> ${chip(v.trangThai||'xong')}<span class="sm grow">${esc(v.bacSi||'')}</span><b class="num">${money(v.tongTien)}</b></div>
+    <div><b>Chẩn đoán:</b> ${esc(v.chanDoan||'—')}</div>${v.ghiChu?`<div class="sm">${esc(v.ghiChu)}</div>`:''}
+    <div class="scroll"><table style="margin-top:6px"><thead><tr><th>Tên</th><th class="r">SL</th><th class="r">Tiền</th><th>Cách dùng</th><th>Buổi</th><th>Mỗi lần</th><th>Ngày</th><th>Lưu ý</th></tr></thead><tbody>
+    ${(v.thuoc||[]).map(l => `<tr><td>${esc(l.ten)}</td><td class="r num">${fmtQ(l.sl)}</td><td class="r num">${fmt(l.tien)}</td><td>${esc(l.cachDung)}</td><td>${esc(l.buoi)}</td><td>${esc(l.moiLan)}</td><td>${esc(l.soNgay)}</td><td>${esc(l.luuY)}</td></tr>`).join('')}${+v.phuThu?`<tr><td class="muted">Cộng thêm${v.phuThuLyDo?' ('+esc(v.phuThuLyDo)+')':''}</td><td></td><td class="r num">${fmt(v.phuThu)}</td><td colspan="5"></td></tr>`:''}</tbody></table></div>`;
+}
+function showVisitModal(v){ if (!v) return; const m = openModal(`<h3>${pad(v.stt,3)} — ${esc(v.ten)} <span class="sm">${esc(v.maBN||'')}</span></h3>${visitDetailHTML(v)}<div class="actions"><button class="btn" data-a="c">Đóng</button></div>`, true); m.querySelector('[data-a=c]').onclick = closeModal; }
+function needX(){ if (!window.XLSX){ toast('Thư viện Excel đang tải, thử lại sau giây lát.'); return false; } return true; }
+function numFmt(ws, cols){ const rg = XLSX.utils.decode_range(ws['!ref']); for (let r=rg.s.r; r<=rg.e.r; r++) for (const c of cols){ const cell = ws[XLSX.utils.encode_cell({r,c})]; if (cell && cell.t==='n') cell.z = '#,##0.##'; } }
+async function saveWb(name, wb){ const buf = XLSX.write(wb, {bookType:'xlsx', type:'array'}); try { await S.dl.save({filename:name, data:buf}); toast('Đã tải file.'); } catch(e){ if (!(e && e.code==='declined')) toast('Không tải được file (' + (e && e.code || 'lỗi') + ').'); } }
+function exportDay(vs, usage){
+  if (!S.dl || !needX()) return;
+  const a = [['STT','Mã BN','Tên','Năm sinh','Tổng tiền','Địa chỉ','Điện thoại','Lưu ý','Bác sĩ','Tiền sử','Dị ứng','Ngày','Chẩn đoán','Ghi chú (CLS)','Trạng thái']];
+  vs.forEach(v => a.push([pad(v.stt,3), v.maBN, v.ten, v.namSinh, +v.tongTien||0, v.diaChi, v.dienThoai, v.luuY, v.bacSi, v.tienSu, v.diUng, viDate(v.ngay), v.chanDoan, v.ghiChu, STATUS[v.trangThai]]));
+  const ws1 = XLSX.utils.aoa_to_sheet(a); numFmt(ws1,[4]);
+  const b = [['Tên thuốc','SL đã dùng','Tiền']]; usage.forEach(u => b.push([u.ten, u.sl, u.tien])); const ws2 = XLSX.utils.aoa_to_sheet(b); numFmt(ws2,[1,2]);
+  const c = [['STT','Mã BN','Tên','Ngày','Bác sĩ','Tên thuốc','Số lượng','Đơn giá','Tiền','Cách dùng','Buổi','Mỗi lần uống','Số ngày','Lưu ý']];
+  vs.forEach(v => (v.thuoc||[]).forEach(l => c.push([pad(v.stt,3), v.maBN, v.ten, viDate(v.ngay), v.bacSi, l.ten, +l.sl, +l.donGia, +l.tien, l.cachDung, l.buoi, l.moiLan, l.soNgay, l.luuY])));
+  const ws3 = XLSX.utils.aoa_to_sheet(c); numFmt(ws3,[6,7,8]);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws1, 'Luot kham'); XLSX.utils.book_append_sheet(wb, ws2, 'Thuoc da dung'); XLSX.utils.book_append_sheet(wb, ws3, 'Chi tiet toa');
+  saveWb(`Quan-ly-trong-ngay-${S.day}.xlsx`, wb);
+}
+
+/* ================= BỆNH NHÂN ================= */
+function rBenhNhan(){
+  const el = $('#v-benh-nhan');
+  const q = S.bnSearch; const all = q ? searchPatients(q, 100000) : [...S.patients.values()].sort((a,b) => String(b.ma).localeCompare(String(a.ma)));
+  const per = 50, pages = Math.max(1, Math.ceil(all.length/per)); S.bnPage = Math.min(S.bnPage, pages-1);
+  const list = all.slice(S.bnPage*per, S.bnPage*per+per);
+  el.innerHTML = `<div class="card"><h2>Hồ sơ bệnh nhân <span class="hint">${fmt(S.patients.size)} bệnh nhân</span><span class="sp"></span><button class="btn sm" id="bnEx" ${S.dl?'':'disabled'}>⬇ Xuất Excel</button></h2>
+    <input type="search" id="bnQ" placeholder="Tìm theo tên, năm sinh, địa chỉ, SĐT, mã BN…" value="${esc(q)}" style="margin-bottom:10px">
+    ${list.length ? `<div class="scroll"><table><thead><tr><th>Mã BN</th><th>Họ tên</th><th>NS</th><th>Địa chỉ</th><th>Điện thoại</th><th>Tiền sử</th><th>Dị ứng</th><th class="r">Số lần khám</th><th>Gần nhất</th></tr></thead><tbody>
+    ${list.map(p => `<tr class="click" data-m="${esc(p.ma)}"><td class="sm num">${esc(p.ma)}</td><td><b>${esc(p.ten)}</b></td><td class="num">${esc(p.namSinh)}</td><td class="sm">${esc(p.diaChi)}</td><td class="num sm">${esc(p.dienThoai)}</td><td class="sm">${esc(p.tienSu)}</td><td class="sm">${esc(p.diUng)}</td><td class="r num">${(p.lk||[]).length}</td><td class="num sm">${p.lanCuoi?viDate(p.lanCuoi):''}</td></tr>`).join('')}</tbody></table></div>
+    <div class="row" style="margin-top:10px"><span class="sm grow">${fmt(all.length)} kết quả · trang ${S.bnPage+1}/${pages}</span><button class="btn sm" id="bnPrev" ${S.bnPage?'':'disabled'}>‹ Trước</button><button class="btn sm" id="bnNext" ${S.bnPage<pages-1?'':'disabled'}>Sau ›</button></div>`
+    : `<div class="empty"><h3>${S.patients.size?'Không tìm thấy':'Chưa có hồ sơ bệnh nhân'}</h3><p>${S.patients.size?'Thử từ khóa khác.':'Bệnh nhân được tạo khi phát số ở mục Tiếp đón, hoặc nhập từ Google Sheets cũ ở mục Cài đặt.'}</p></div>`}</div>`;
+  const qi = $('#bnQ'); qi.oninput = () => { S.bnSearch = qi.value; S.bnPage = 0; clearTimeout(qi._t); qi._t = setTimeout(()=>{ rBenhNhan(); const n=$('#bnQ'); n.focus(); n.setSelectionRange(n.value.length,n.value.length); }, 250); };
+  $$('#v-benh-nhan tr[data-m]').forEach(tr => tr.onclick = () => patientModal(tr.dataset.m));
+  const pv = $('#bnPrev'), nx = $('#bnNext'); if (pv) pv.onclick = () => { S.bnPage--; rBenhNhan(); }; if (nx) nx.onclick = () => { S.bnPage++; rBenhNhan(); };
+  $('#bnEx').onclick = () => { if (!S.dl || !needX()) return; const a = [['Mã BN','Tên','Năm sinh','Địa chỉ','Điện thoại','Lưu ý','Tiền sử','Dị ứng','Số lần khám','Khám gần nhất']]; [...S.patients.values()].sort((x,y)=>String(x.ma).localeCompare(String(y.ma))).forEach(p => a.push([p.ma,p.ten,p.namSinh,p.diaChi,p.dienThoai,p.luuY,p.tienSu,p.diUng,(p.lk||[]).length,p.lanCuoi?viDate(p.lanCuoi):''])); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(a), 'Benh nhan'); saveWb('Thong-tin-benh-nhan.xlsx', wb); };
+}
+async function patientModal(ma){
+  const p = S.patients.get(ma); if (!p) return;
+  const refs = (p.lk||[]).slice().sort().reverse();
+  const m = openModal(`<h3>${esc(p.ten)} <span class="sm">${esc(p.ma)} · ${esc(p.namSinh)}</span></h3>
+    <div class="flags" style="margin-top:0"><div class="flag"><b>Địa chỉ:</b>${esc(p.diaChi||'—')}</div><div class="flag"><b>ĐT:</b>${esc(p.dienThoai||'—')}</div><div class="flag"><b>Tiền sử:</b>${esc(p.tienSu||'—')}</div><div class="flag"><b>Dị ứng:</b>${esc(p.diUng||'—')}</div>${p.luuY?`<div class="flag"><b>Lưu ý:</b>${esc(p.luuY)}</div>`:''}</div>
+    <div class="actions" style="justify-content:flex-start"><button class="btn sm" data-a="edit">Sửa hồ sơ</button><button class="btn sm" data-a="reg">Phát số hôm nay</button></div>
+    <h3 style="margin-top:16px;font-size:15px">Tất cả đơn thuốc đã khám (${refs.length})</h3><div id="pmList"><div class="sm">Đang tải…</div></div>
+    <div class="actions"><button class="btn" data-a="c">Đóng</button></div>`, true);
+  m.querySelector('[data-a=c]').onclick = closeModal;
+  m.querySelector('[data-a=edit]').onclick = () => editPatientModal(ma);
+  m.querySelector('[data-a=reg]').onclick = () => { S.pickPat = Object.assign({}, p); closeModal(); if (S.day !== todayStr()){ S.day = todayStr(); $('#selDay').value = S.day; subscribeDay(); } location.hash = 'tiep-don'; applyRoute(); };
+  try {
+    const vs = []; for (let i=0;i<refs.length;i+=10){ vs.push(...(await Promise.all(refs.slice(i,i+10).map(getVisitByRef)))); if (!$('#pmList')) return; }
+    $('#pmList').innerHTML = vs.filter(Boolean).map(v => `<div class="hc" style="margin-bottom:10px">${visitDetailHTML(v)}</div>`).join('') || '<div class="sm">Chưa có lần khám nào.</div>';
+  } catch(e){ const b = $('#pmList'); if (b) b.innerHTML = '<div class="sm bad">Không tải được lịch sử.</div>'; }
+}
+
+/* ================= DANH MỤC THUỐC ================= */
+function drugGroup(t){ const m = String(t.ten).match(/^\s*\[\s*([^\]]+)\]/); return m ? m[1].trim() : (t.cachDung ? 'Thuốc uống' : 'Khác'); }
+function rThuoc(){
+  const el = $('#v-thuoc'); const q = norm(S.drugSearch);
+  const list = S.drugs.filter(t => !q || norm(t.ten+' '+(t.ghiChu||'')).includes(q));
+  const groups = new Map(); list.forEach(t => { const g = drugGroup(t); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(t); });
+  el.innerHTML = `<div class="card"><h2>Danh mục thuốc & dịch vụ <span class="hint">${S.drugs.length} mẫu kê</span><span class="sp"></span><button class="btn sm primary" id="dmAdd">＋ Thêm</button></h2>
+    <p class="sm" style="margin-top:-6px">Mỗi dòng là một <b>mẫu kê</b> (cùng thuốc có thể có nhiều mẫu, ví dụ 7 viên hoặc 14 viên). Khi kê, dòng thuốc lấy Tiền của mẫu kê; nếu đổi số lượng/buổi/số ngày thì Tiền = Số lượng × Đơn giá.</p>
+    <input type="search" id="dmQ" placeholder="Tìm thuốc…" value="${esc(S.drugSearch)}" style="margin-bottom:10px">
+    ${list.length ? `<div class="scroll"><table><thead><tr><th>Tên thuốc</th><th>Ghi chú</th><th class="r">SL</th><th class="r">Tiền</th><th class="r">Đơn giá</th><th>Cách dùng</th><th>Buổi</th><th>Mỗi lần</th><th>Ngày</th><th>Lưu ý</th></tr></thead><tbody>
+    ${[...groups.entries()].map(([g, arr]) => `<tr><td colspan="10" style="background:var(--surface-2);font-weight:600">${esc(g)} <span class="sm">(${arr.length})</span></td></tr>` + arr.map(t => `<tr class="click" data-d="${esc(t.id)}"><td><b>${esc(t.ten)}</b>${t.het?'<span class="tag red">hết</span>':''}</td><td class="sm">${esc(t.ghiChu)}</td><td class="r num">${fmtQ(t.sl)}</td><td class="r num">${fmt(t.tien)}</td><td class="r num">${fmt(t.donGia)}</td><td class="sm">${esc(t.cachDung)}</td><td class="sm">${esc(t.buoi)}</td><td class="sm">${esc(t.moiLan)}</td><td class="num sm">${esc(t.soNgay)}</td><td class="sm">${esc(t.luuY)}</td></tr>`).join('')).join('')}
+    </tbody></table></div>` : '<div class="empty"><h3>Danh mục trống</h3><p>Thêm thuốc, hoặc nhập từ Google Sheets cũ ở mục Cài đặt.</p></div>'}</div>`;
+  const qi = $('#dmQ'); qi.oninput = () => { S.drugSearch = qi.value; clearTimeout(qi._t); qi._t = setTimeout(()=>{ rThuoc(); const n=$('#dmQ'); n.focus(); n.setSelectionRange(n.value.length,n.value.length); }, 200); };
+  $('#dmAdd').onclick = () => drugModal(null);
+  $$('#v-thuoc tr[data-d]').forEach(tr => tr.onclick = () => drugModal(S.drugs.find(t => t.id === tr.dataset.d)));
+}
+function drugModal(t){
+  const d = t ? Object.assign({}, t) : {ten:'', ghiChu:'', sl:1, tien:0, donGia:0, cachDung:'', buoi:'', moiLan:'', soNgay:'', luuY:'', het:false};
+  const F = (k, l, extra='') => `<div class="field"><label>${l}</label><input type="text" data-k="${k}" value="${esc(k==='donGia'||k==='tien'?fmt(d[k]):k==='sl'?fmtQ(d[k]):d[k])}" ${extra}></div>`;
+  const m = openModal(`<h3>${t?'Sửa mẫu kê':'Thêm thuốc / dịch vụ'}</h3>
+    ${F('ten','Tên thuốc * — thuốc chích/truyền ghi dạng [Chích] Tên')}
+    <div class="f2">${F('ghiChu','Ghi chú / hoạt chất (dùng để tìm)')}<label class="check" style="margin-top:18px"><input type="checkbox" data-k="het" ${d.het?'checked':''}> Đang hết thuốc</label></div>
+    <div class="f3" style="grid-template-columns:1fr 1fr 1fr">${F('sl','Số lượng mặc định','inputmode="decimal"')}${F('donGia','Đơn giá (giá bán lẻ)','inputmode="numeric"')}${F('tien','Tiền của mẫu kê','inputmode="numeric"')}</div>
+    <div class="f2">${F('buoi','Buổi (VD: Sáng, Chiều)')}${F('moiLan','Mỗi lần uống (VD: 1 viên)')}</div>
+    <div class="f2">${F('soNgay','Số ngày','inputmode="numeric"')}${F('cachDung','Cách dùng')}</div>
+    ${F('luuY','Lưu ý')}
+    <div class="sm" id="dmCalc"></div><div class="sm bad" id="dmErr"></div>
+    <div class="actions">${t?'<button class="btn danger left" data-a="del">Xóa</button>':''}<button class="btn" data-a="no">Hủy</button><button class="btn primary" data-a="ok">Lưu</button></div>`);
+  const val = () => { const o = Object.assign({}, d); $$('[data-k]', m).forEach(i => { const k = i.dataset.k; o[k] = k==='het' ? i.checked : (k==='donGia'||k==='tien') ? parseAmount(i.value) : k==='sl' ? parseQty(i.value) : i.value.trim(); }); return o; };
+  const calc = () => { const o = val(); const n = soLanTrongNgay(o.buoi), ml = parseQty(o.moiLan), nd = parseQty(o.soNgay); const auto = Math.round((+o.sl||0)*(+o.donGia||0)); $('#dmCalc').innerHTML = `Số lượng × Đơn giá = ${fmtQ(o.sl)} × ${fmt(o.donGia)} = <b>${money(auto)}</b>${o.tien!==auto?` <span class="tag red">Tiền mẫu kê đang khác: ${fmt(o.tien)}</span>`:''}` + (n&&ml&&nd ? ` · Buổi × mỗi lần × số ngày = ${fmtQ(n*ml*nd)}` : ''); };
+  $$('[data-k]', m).forEach(i => i.addEventListener('input', () => { if (i.dataset.k==='sl' || i.dataset.k==='donGia'){ const o = val(); const ti = m.querySelector('[data-k=tien]'); ti.value = fmt(Math.round((+o.sl||0)*(+o.donGia||0))); } calc(); })); calc();
+  m.querySelector('[data-a=no]').onclick = closeModal;
+  const del = m.querySelector('[data-a=del]'); if (del) del.onclick = async () => { if (!(await confirmBox('Xóa mẫu kê?', t.ten + ' sẽ bị xóa khỏi danh mục (các toa cũ không bị ảnh hưởng).', 'Xóa'))) return; try { await withRetry(()=> S.db.collection('thuoc').doc(t.id).delete()); toast('Đã xóa.'); } catch(e){ toast(errMsg(e)); } };
+  m.querySelector('[data-a=ok]').onclick = async () => {
+    const o = val(); if (!o.ten){ $('#dmErr').textContent = 'Cần tên thuốc.'; return; }
+    const id = t ? t.id : uid(); const data = Object.assign({}, o); delete data.id; delete data._k; if (data.thuTu == null) data.thuTu = S.drugs.length;
+    try { await withRetry(()=> S.db.collection('thuoc').doc(id).set(data)); closeModal(); toast('Đã lưu.'); } catch(e){ $('#dmErr').textContent = errMsg(e); }
+  };
+}
+
+/* ================= THỐNG KÊ ================= */
+async function loadStats(){
+  const key = S.tkMode==='nam' ? `${S.tkYear}` : `${S.tkYear}-${pad(S.tkMonth)}`;
+  S.tkData = {key, loading:true}; rThongKe();
+  try {
+    const ds = await withRetry(()=> S.db.collection('ngay').get());
+    const days = ds.docs.map(d => d.id).filter(d => d.startsWith(key)).sort();
+    const out = [];
+    for (let i=0;i<days.length;i+=6){ const parts = await Promise.all(days.slice(i,i+6).map(d => withRetry(()=> S.db.collection(visitPath(d)).get()))); parts.forEach((p,j) => out.push({day:days[i+j], visits:p.docs.map(x => Object.assign({}, x.data(), {id:x.id}))})); }
+    if (S.tkData.key === key) { S.tkData = {key, days:out}; rThongKe(); }
+  } catch(e){ console.error(e); S.tkData = {key, error:true}; rThongKe(); }
+}
+function rThongKe(){
+  const el = $('#v-thong-ke');
+  const key = S.tkMode==='nam' ? `${S.tkYear}` : `${S.tkYear}-${pad(S.tkMonth)}`;
+  if (!S.tkData || S.tkData.key !== key){ loadStats(); return; }
+  const cy = new Date().getFullYear();
+  const ctrl = `<div class="row" style="margin-bottom:14px"><div class="seg" id="tkSeg"><button data-v="thang" class="${S.tkMode==='thang'?'on':''}">Theo tháng</button><button data-v="nam" class="${S.tkMode==='nam'?'on':''}">Theo năm</button></div>
+    <select id="tkY" style="width:auto">${[cy+1,cy,cy-1,cy-2,cy-3].map(y => `<option ${y===S.tkYear?'selected':''}>${y}</option>`).join('')}</select>
+    ${S.tkMode==='thang'?`<select id="tkM" style="width:auto">${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i+1===S.tkMonth?'selected':''}>Tháng ${i+1}</option>`).join('')}</select>`:''}
+    <span class="grow"></span><button class="btn sm" id="tkRe">Tải lại</button><button class="btn sm" id="tkEx" ${S.dl?'':'disabled'}>⬇ Xuất Excel</button></div>`;
+  let body;
+  if (S.tkData.loading) body = '<div class="card empty">Đang tổng hợp…</div>';
+  else if (S.tkData.error) body = '<div class="card empty">Không tải được dữ liệu thống kê.</div>';
+  else {
+    const days = S.tkData.days.map(d => { const b = d.visits.filter(v => v.trangThai==='cho-soan'||v.trangThai==='xong'); return {day:d.day, n:d.visits.length, tien:b.reduce((a,v)=>a+(+v.tongTien||0),0), visits:b}; });
+    const allV = days.flatMap(d => d.visits); const tot = days.reduce((a,d)=>a+d.tien,0); const n = days.reduce((a,d)=>a+d.n,0);
+    const pts = new Set(allV.map(v => v.maBN)); const usage = drugUsage(allV);
+    const docs = new Map(); allV.forEach(v => { const k = v.bacSi||'(không rõ)'; const o = docs.get(k)||{n:0,t:0}; o.n++; o.t+=+v.tongTien||0; docs.set(k,o); });
+    const topT = usage.slice().sort((a,b)=>b.tien-a.tien).slice(0,12); const maxT = topT[0]?.tien || 1;
+    body = `<div class="tiles">
+      <div class="card tile"><div class="lab">Doanh thu</div><div class="val num">${fmt(tot)} <small>₫</small></div><div class="note">${days.length} ngày khám</div></div>
+      <div class="card tile"><div class="lab">Lượt khám</div><div class="val num">${fmt(n)}</div><div class="note">${fmt(pts.size)} bệnh nhân khác nhau</div></div>
+      <div class="card tile"><div class="lab">Trung bình / lượt</div><div class="val num">${fmt(allV.length?tot/allV.length:0)} <small>₫</small></div><div class="note">trên ${fmt(allV.length)} toa</div></div>
+      <div class="card tile"><div class="lab">Trung bình / ngày khám</div><div class="val num">${fmt(days.length?tot/days.length:0)} <small>₫</small></div><div class="note">${days.length?fmt(n/days.length):0} lượt/ngày</div></div></div>
+    <div class="card" style="margin-bottom:14px"><h2>Doanh thu theo ngày khám</h2>${days.length?'<div class="chart-wrap" id="tkChart"><div class="tip" id="tkTip"></div></div>':'<div class="sm">Chưa có dữ liệu.</div>'}</div>
+    <div class="cols" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+      <div class="card"><h2>Thuốc / dịch vụ theo doanh thu</h2><div class="bars">${topT.map(u => `<div class="b" title="${esc(u.ten)}"><span class="nm">${esc(u.ten)}</span><div class="tr"><div class="fl" style="width:${(u.tien/maxT*100).toFixed(1)}%"></div></div><span class="v num">${fmt(u.tien)}</span></div>`).join('') || '<div class="sm">—</div>'}</div></div>
+      <div class="card"><h2>Số lượng thuốc đã dùng</h2><div class="scroll" style="max-height:360px"><table><thead><tr><th>Tên thuốc</th><th class="r">SL</th><th class="r">Số toa</th></tr></thead><tbody>${usage.map(u => `<tr><td>${esc(u.ten)}</td><td class="r num"><b>${fmtQ(u.sl)}</b></td><td class="r num sm">${u.n}</td></tr>`).join('')}</tbody></table></div></div>
+      <div class="card"><h2>Theo bác sĩ</h2><table><thead><tr><th>Bác sĩ</th><th class="r">Lượt</th><th class="r">Doanh thu</th></tr></thead><tbody>${[...docs.entries()].sort((a,b)=>b[1].n-a[1].n).map(([k,o]) => `<tr><td>${esc(k)}</td><td class="r num">${o.n}</td><td class="r num">${fmt(o.t)}</td></tr>`).join('')}</tbody></table></div>
+    </div>`;
+    S._tk = {days, usage, docs};
+  }
+  el.innerHTML = ctrl + body;
+  $$('#tkSeg button').forEach(b => b.onclick = () => { S.tkMode = b.dataset.v; rThongKe(); });
+  $('#tkY').onchange = e => { S.tkYear = +e.target.value; rThongKe(); };
+  const tm = $('#tkM'); if (tm) tm.onchange = e => { S.tkMonth = +e.target.value; rThongKe(); };
+  $('#tkRe').onclick = () => { S.tkData = null; rThongKe(); };
+  $('#tkEx').onclick = () => { if (!S.dl || !needX() || !S._tk) return; const a = [['Ngày','Thứ','Lượt khám','Doanh thu']]; S._tk.days.forEach(d => a.push([viDate(d.day), dayName(d.day), d.n, d.tien])); const b = [['Tên thuốc','SL','Số toa','Tiền']]; S._tk.usage.forEach(u => b.push([u.ten,u.sl,u.n,u.tien])); const wb = XLSX.utils.book_new(); const w1 = XLSX.utils.aoa_to_sheet(a); numFmt(w1,[3]); const w2 = XLSX.utils.aoa_to_sheet(b); numFmt(w2,[1,3]); XLSX.utils.book_append_sheet(wb, w1, 'Theo ngay'); XLSX.utils.book_append_sheet(wb, w2, 'Thuoc');
+    const names = S._tk.usage.map(u => u.ten); const mtx = [['Ngày'].concat(names)]; S._tk.days.forEach(d => { const u = new Map(drugUsage(d.visits).map(x => [x.ten, x.sl])); mtx.push([viDate(d.day)].concat(names.map(n => u.get(n) || ''))); });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mtx), 'Thuoc theo ngay'); saveWb(`Thong-ke-${key}.xlsx`, wb); };
+  if (S._tk && $('#tkChart')) drawDayChart(S._tk.days);
+}
+function niceStep(x){ if (x<=0) return 1; const p = Math.pow(10, Math.floor(Math.log10(x))); const f = x/p; return (f<=1?1:f<=2?2:f<=5?5:10)*p; }
+function compact(n){ const a = Math.abs(n); if (a>=1e9) return (n/1e9).toLocaleString('vi-VN',{maximumFractionDigits:1})+' tỷ'; if (a>=1e6) return (n/1e6).toLocaleString('vi-VN',{maximumFractionDigits:1})+' tr'; if (a>=1e3) return Math.round(n/1e3)+'k'; return String(n); }
+function drawDayChart(days){
+  const box = $('#tkChart'); const tip = $('#tkTip');
+  const W = Math.max(320, box.clientWidth), H = 230, L = 52, R = 8, T = 10, B = 28;
+  const max = Math.max(1, ...days.map(d => d.tien)); const step = niceStep(max/4); const top = Math.ceil(max/step)*step;
+  const y = v => T + (H-T-B)*(1 - v/top); const band = (W-L-R)/days.length; const bw = Math.max(4, Math.min(24, band-6));
+  let g = ''; for (let v=0; v<=top+1e-6; v+=step) g += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${v?compact(v):'0'}</text>`;
+  let bars = '', hits = ''; const every = Math.ceil(days.length / Math.max(1, Math.floor((W-L)/48)));
+  days.forEach((d,i) => { const cx = L + i*band + band/2; const h = y(0)-y(d.tien); const r = Math.min(4,h,bw/2);
+    if (h > 0) bars += `<path d="M${cx-bw/2},${y(0)}V${y(d.tien)+r}Q${cx-bw/2},${y(d.tien)} ${cx-bw/2+r},${y(d.tien)}H${cx+bw/2-r}Q${cx+bw/2},${y(d.tien)} ${cx+bw/2},${y(d.tien)+r}V${y(0)}Z" fill="var(--s1)"/>`;
+    if (i % every === 0) bars += `<text x="${cx}" y="${H-9}" text-anchor="middle" font-size="11" fill="var(--muted)">${d.day.slice(8,10)}/${d.day.slice(5,7)}</text>`;
+    hits += `<rect data-i="${i}" x="${L+i*band}" y="${T}" width="${band}" height="${H-T-B}" fill="transparent"/>`; });
+  box.innerHTML = `<svg width="100%" viewBox="0 0 ${W} ${H}" role="img" aria-label="Doanh thu theo ngày khám" style="display:block">${g}<line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" stroke="var(--border)"/>${bars}<g id="tkHits">${hits}</g></svg>`; box.appendChild(tip);
+  const hl = $('#tkHits');
+  hl.addEventListener('mousemove', e => { const r = e.target.closest('rect'); if (!r) return; const d = days[+r.dataset.i]; tip.innerHTML = `<b>${esc(dayName(d.day))} ${viDate(d.day)}</b><div>${fmt(d.n)} lượt khám</div><div>Doanh thu: <b>${money(d.tien)}</b></div>`; tip.style.display='block'; const bb = box.getBoundingClientRect(); let x = e.clientX-bb.left+14; if (x+190>bb.width) x = e.clientX-bb.left-200; tip.style.left = x+'px'; tip.style.top = Math.max(0,e.clientY-bb.top-40)+'px'; $$('rect',hl).forEach(o => o.setAttribute('fill', o===r?'rgba(127,127,127,.08)':'transparent')); });
+  hl.addEventListener('mouseleave', () => { tip.style.display='none'; $$('rect',hl).forEach(o => o.setAttribute('fill','transparent')); });
+  hl.addEventListener('click', e => { const r = e.target.closest('rect'); if (!r) return; S.day = days[+r.dataset.i].day; $('#selDay').value = S.day; subscribeDay(); location.hash = 'trong-ngay'; });
+}
+
+/* ================= CÀI ĐẶT + NHẬP DỮ LIỆU ================= */
+function rCaiDat(){
+  const el = $('#v-cai-dat'); const st = S.settings; const I = S.imp;
+  el.innerHTML = `<div class="cols" style="grid-template-columns:repeat(auto-fit,minmax(360px,1fr))">
+  <div class="card"><h2>Thông tin phòng khám <span class="hint">in trên đơn thuốc</span></h2>
+    <div class="field"><label>Tên phòng khám</label><input type="text" id="cTen" value="${esc(st.tenPK)}"></div>
+    <div class="field"><label>Địa chỉ</label><input type="text" id="cDC" value="${esc(st.diaChi)}"></div>
+    <div class="f2"><div class="field"><label>Điện thoại</label><input type="text" id="cDT" value="${esc(st.dienThoai)}"></div>
+    <div class="field"><label>Phí khám mặc định (₫)</label><input type="text" id="cPhi" inputmode="numeric" value="${fmt(st.phiKham)}"></div></div>
+    <div class="field"><label>Khoản cộng thêm (₫) — bác sĩ bật/tắt cho từng toa</label><input type="text" id="cPhu" inputmode="numeric" value="${fmt(st.phuThu)}">
+      <label class="check" style="margin-top:6px"><input type="checkbox" id="cPhuOn" ${st.phuThuMacDinh?'checked':''}> Toa mới bật sẵn “Cộng thêm”</label>
+      <span class="sm">Trên mỗi máy, toa mới sẽ theo lựa chọn bật/tắt ở toa gần nhất của máy đó.</span></div>
+    <div class="field"><label>Danh sách bác sĩ (mỗi dòng một người)</label><textarea id="cBS" rows="4">${esc((st.bacSi||[]).join('\n'))}</textarea></div>
+    <div class="field"><label>Lời dặn in trên đơn</label><textarea id="cLD" rows="2">${esc(st.loiDan)}</textarea></div>
+    <div class="actions"><button class="btn primary" id="cSave">Lưu cài đặt</button></div></div>
+  <div class="card"><h2>Nhập dữ liệu từ Google Sheets cũ</h2>
+    <p class="sm" style="margin-top:-4px">Trên Google Sheets chọn <b>Tệp → Tải xuống → Microsoft Excel (.xlsx)</b>, rồi chọn file đó ở đây. App đọc các trang <b>Danh mục thuốc</b>, <b>Thông tin Bệnh nhân</b> và <b>Toa thuốc cũ</b>. File chỉ được đọc trên trình duyệt này; nhập lại lần hai sẽ không tạo bản trùng.</p>
+    <input type="file" id="impFile" accept=".xlsx,.xls">
+    <div id="impBox" style="margin-top:12px">${impHTML()}</div></div>
+  <div class="card"><h2>Sao lưu dữ liệu</h2>
+    <p class="sm" style="margin-top:-4px">Tải toàn bộ dữ liệu ra một file Excel: bệnh nhân, mọi lượt khám và toa thuốc, danh mục thuốc, bác sĩ. File dùng cùng cấu trúc với Google Sheets cũ nên <b>nhập lại được</b> bằng mục “Nhập dữ liệu” bên cạnh. Nên sao lưu mỗi tuần và cất vào Google Drive.</p>
+    <button class="btn primary" id="bkGo" ${S.dl?'':'disabled'}>⬇ Sao lưu toàn bộ ra Excel</button> <span class="sm" id="bkMsg"></span></div></div>
+  ${S.db && S.db._fire ? `<div class="card" style="margin-top:14px"><h2>Nhân viên được dùng app <span class="hint">đăng nhập bằng email</span></h2><div id="nvBox"><div class="sm">Đang tải…</div></div></div>` : ''}
+  <p class="sm" style="margin-top:12px">${S.db && S.db._fire ? 'Dữ liệu lưu trên Firebase (Google Cloud) của phòng khám. Chỉ tài khoản có trong danh sách nhân viên mới đọc/ghi được.' : S.db && S.db._local ? 'Chế độ thử: dữ liệu chỉ lưu trên trình duyệt này.' : 'Dữ liệu lưu trên máy chủ Claude của trang này; mọi người được chia sẻ trang (quyền chỉnh sửa trở lên) đều thấy và cập nhật theo thời gian thực.'}</p>`;
+  $('#cSave').onclick = async () => {
+    const st2 = Object.assign({}, S.settings, { tenPK: $('#cTen').value.trim() || 'Phòng khám', diaChi: $('#cDC').value.trim(), dienThoai: $('#cDT').value.trim(), phiKham: parseAmount($('#cPhi').value), phuThu: parseAmount($('#cPhu').value), phuThuMacDinh: $('#cPhuOn').checked, bacSi: [...new Set($('#cBS').value.split('\n').map(s=>s.trim()).filter(Boolean))], loiDan: $('#cLD').value.trim() });
+    try { await withRetry(()=> S.db.doc('cauhinh/chung').set(st2)); S.settings = st2; toast('Đã lưu cài đặt.'); renderAll(true); } catch(e){ toast(errMsg(e)); }
+  };
+  $('#impFile').onchange = e => { const f = e.target.files[0]; if (f) readImport(f); };
+  $('#bkGo').onclick = exportAll;
+  if (S.db && S.db._fire) loadStaff();
+  bindImp();
+}
+async function exportAll(){
+  if (!S.dl || !needX()) return; const btn = $('#bkGo'), msg = $('#bkMsg'); btn.disabled = true;
+  try {
+    msg.textContent = 'Đang đọc danh sách ngày khám…';
+    const ds = await withRetry(()=> S.db.collection('ngay').get()); const days = ds.docs.map(d => d.id).sort();
+    const visits = [];
+    for (let i=0;i<days.length;i+=6){ const parts = await Promise.all(days.slice(i,i+6).map(d => withRetry(()=> S.db.collection(visitPath(d)).get()))); parts.forEach((p,j) => p.docs.forEach(x => visits.push(Object.assign({}, x.data(), {id:x.id, ngay: x.data().ngay || days[i+j]})))); msg.textContent = `Đang đọc lượt khám… ${Math.min(i+6,days.length)}/${days.length} ngày`; }
+    visits.sort((a,b) => a.ngay.localeCompare(b.ngay) || (a.stt||0)-(b.stt||0));
+    const wb = XLSX.utils.book_new();
+    // Thông tin Bệnh nhân (giống sheet cũ)
+    const pa = [['THÔNG TIN BỆNH NHÂN (HỒ SƠ GỐC)'],[],['Mã BN','Tên','Năm sinh','Địa chỉ','Điện thoại','Lưu ý','Tiền sử','Dị ứng','Số lần khám','Khám gần nhất']];
+    [...S.patients.values()].sort((a,b)=>String(a.ma).localeCompare(String(b.ma))).forEach(p => pa.push([p.ma,p.ten,p.namSinh,p.diaChi,p.dienThoai,p.luuY,p.tienSu,p.diUng,(p.lk||[]).length,p.lanCuoi?viDate(p.lanCuoi):'']));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(pa), 'Thông tin Bệnh nhân');
+    // Danh mục thuốc (giống sheet cũ: A ghi chú, B tên, C SL, D tiền, E..I, J giá bán lẻ)
+    const da = [['','Tên thuốc','Số lượng','Tiền','Cách dùng','Buổi','Mỗi lần uống','Số ngày','Lưu ý','Giá bán lẻ']];
+    S.drugs.forEach(t => da.push([t.het?'hết':(t.ghiChu||''), t.ten, +t.sl||0, +t.tien||0, t.cachDung||'', t.buoi||'', t.moiLan||'', t.soNgay||'', t.luuY||'', +t.donGia||0]));
+    const wd = XLSX.utils.aoa_to_sheet(da); numFmt(wd,[2,3,9]); XLSX.utils.book_append_sheet(wb, wd, 'Danh mục thuốc');
+    // Toa thuốc cũ (khối như sheet cũ, nhập lại được)
+    const LB = ['Bác sĩ','Tên','Năm sinh','Địa chỉ','Số điện thoại','Lưu ý','Tiền sử','Dị ứng','Trạng thái','Chẩn đoán','Ghi chú lần khám này','Tổng tiền'];
+    const ta = [['TOA THUỐC (SAO LƯU)','','','Mỗi khối = 1 lượt khám']];
+    visits.forEach(v => {
+      const vals = [v.bacSi, v.ten, v.namSinh, v.diaChi, v.dienThoai, v.luuY, v.tienSu, v.diUng, STATUS[v.trangThai]||'', v.chanDoan, v.ghiChu, +v.tongTien||0];
+      const lines = (v.thuoc||[]).map(l => [l.ten, +l.sl||0, +l.tien||0, l.cachDung||'', l.buoi||'', l.moiLan||'', l.soNgay||'', l.luuY||'', +l.donGia||0]);
+      if (+v.phuThu) lines.push(['Cộng thêm' + (v.phuThuLyDo?' ('+v.phuThuLyDo+')':''), 1, +v.phuThu, '', '', '', '', '', +v.phuThu]);
+      ta.push(['STT', pad(v.stt||0,3)], ['Mã Bệnh nhân', v.maBN||''], ['Ngày giờ', viDate(v.ngay), '', '', 'Tên thuốc','Số lượng','Tiền','Cách dùng','Buổi','Mỗi lần uống','Số ngày','Lưu ý','Giá bán lẻ']);
+      const n = Math.max(LB.length, lines.length);
+      for (let i=0;i<n;i++){ const l = lines[i] || []; ta.push([LB[i]||'', i<LB.length ? (vals[i] ?? '') : '', '', ''].concat(l)); }
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ta), 'Toa thuốc cũ');
+    // Bảng phẳng để xem/tính toán
+    const la = [['Ngày','STT','Mã BN','Tên','Năm sinh','Bác sĩ','Chẩn đoán','Ghi chú','Cộng thêm','Tổng tiền','Trạng thái']];
+    visits.forEach(v => la.push([viDate(v.ngay), pad(v.stt||0,3), v.maBN, v.ten, v.namSinh, v.bacSi, v.chanDoan, v.ghiChu, +v.phuThu||0, +v.tongTien||0, STATUS[v.trangThai]||'']));
+    const wl = XLSX.utils.aoa_to_sheet(la); numFmt(wl,[8,9]); XLSX.utils.book_append_sheet(wb, wl, 'Lượt khám');
+    const ca = [['Ngày','STT','Mã BN','Tên','Tên thuốc','Số lượng','Đơn giá','Tiền','Cách dùng','Buổi','Mỗi lần uống','Số ngày','Lưu ý']];
+    visits.forEach(v => (v.thuoc||[]).forEach(l => ca.push([viDate(v.ngay), pad(v.stt||0,3), v.maBN, v.ten, l.ten, +l.sl||0, +l.donGia||0, +l.tien||0, l.cachDung, l.buoi, l.moiLan, l.soNgay, l.luuY])));
+    const wc = XLSX.utils.aoa_to_sheet(ca); numFmt(wc,[5,6,7]); XLSX.utils.book_append_sheet(wb, wc, 'Chi tiết toa');
+    const ba = [['Mã BS','Họ và tên','Chuyên khoa','SĐT','Trạng thái']]; (S.settings.bacSi||[]).forEach((b,i) => ba.push(['BS'+(i+1), b, '', '', 'Đang làm việc']));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ba), 'Thông tin Bác sĩ');
+    msg.textContent = `${fmt(S.patients.size)} bệnh nhân · ${fmt(visits.length)} lượt khám · ${fmt(S.drugs.length)} mẫu thuốc`;
+    await saveWb(`Sao-luu-phong-kham-${todayStr()}.xlsx`, wb);
+  } catch(e){ console.error(e); msg.textContent = 'Sao lưu lỗi: ' + errMsg(e); }
+  finally { btn.disabled = false; }
+}
+function impHTML(){
+  const I = S.imp; if (!I) return '';
+  if (I.error) return `<div class="bad">${esc(I.error)}</div>`;
+  const k = I.counts;
+  return `<table><tbody>
+    <tr><td>Danh mục thuốc</td><td class="r num"><b>${fmt(k.drugs)}</b> mẫu kê</td><td><label class="check"><input type="checkbox" id="impD" ${k.drugs?'checked':''}> nhập</label></td></tr>
+    <tr><td>Thông tin bệnh nhân</td><td class="r num"><b>${fmt(k.patients)}</b> hồ sơ</td><td><label class="check"><input type="checkbox" id="impP" ${k.patients?'checked':''}> nhập</label></td></tr>
+    <tr><td>Toa thuốc cũ (lượt khám)</td><td class="r num"><b>${fmt(k.visits)}</b> lượt · ${fmt(k.days)} ngày</td><td><label class="check"><input type="checkbox" id="impV" ${k.visits?'checked':''}> nhập</label></td></tr>
+    ${k.doctors?`<tr><td>Bác sĩ tìm thấy</td><td colspan="2" class="sm">${esc(I.doctors.join(', '))}</td></tr>`:''}
+  </tbody></table>
+  ${I.warn?`<p class="sm">${esc(I.warn)}</p>`:''}
+  <div class="prog" id="impProg"><div></div></div><div class="sm" id="impMsg"></div>
+  <div class="actions"><button class="btn primary" id="impGo">Bắt đầu nhập</button></div>`;
+}
+function bindImp(){ const g = $('#impGo'); if (g) g.onclick = runImport; }
+function cell(v){ return v == null ? '' : (typeof v === 'string' ? v.trim() : v); }
+function parseNS(v){
+  if (typeof v === 'number'){ if (v > 1900 && v < 2100) return String(v); if (v > 3000 && v < 80000 && window.XLSX){ const d = XLSX.SSF.parse_date_code(v); return String(d.y); } return String(v); }
+  const s = String(v||'').trim(); const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m && +m[3] >= 1899 && +m[3] <= 1910){ const serial = Math.round((Date.UTC(+m[3], +m[2]-1, +m[1]) - Date.UTC(1899,11,30))/86400000); if (serial > 1900 && serial < 2100) return String(serial); }
+  return s;
+}
+function parseDay(v){
+  if (typeof v === 'number' && window.XLSX){ const d = XLSX.SSF.parse_date_code(v); return d && d.y > 2000 ? `${d.y}-${pad(d.m)}-${pad(d.d)}` : null; }
+  const s = String(v||'').trim(); if (/^\d{5}(\.\d+)?$/.test(s) && window.XLSX) return parseDay(parseFloat(s));
+  const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? `${m[3]}-${pad(m[2])}-${pad(m[1])}` : null;
+}
+function findSheet(wb, name){ const n = norm(name); return wb.SheetNames.find(s => norm(s) === n) || wb.SheetNames.find(s => norm(s).includes(n)); }
+async function readImport(f){
+  if (!needX()) return;
+  try {
+    const wb = XLSX.read(await f.arrayBuffer(), {type:'array'});
+    const rows = n => { const s = findSheet(wb, n); return s ? XLSX.utils.sheet_to_json(wb.Sheets[s], {header:1, raw:true, defval:''}) : null; };
+    // --- drugs
+    const drugs = []; const dr = rows('Danh mục thuốc');
+    if (dr){ let order = 0; for (const r of dr){ const ten = cell(r[1]); if (!ten || norm(ten)==='ten thuoc') continue;
+      const note = String(cell(r[0])); const het = norm(note)==='het';
+      const sl = parseQty(r[2]) || 1; const tien = parseMoney(r[3]); let dg = parseMoney(r[9]); if (!dg) dg = sl ? Math.round(tien/sl) : tien;
+      const t = { ten:String(ten), ghiChu: het?'':note, het, sl, tien: tien || Math.round(sl*dg), donGia: dg, cachDung:String(cell(r[4])), buoi:String(cell(r[5])), moiLan:String(cell(r[6])), soNgay:String(cell(r[7])), luuY:String(cell(r[8])), thuTu: order++ };
+      t.id = 'd' + fnv(t.ten + '|' + t.sl + '|' + t.buoi); drugs.push(t); } }
+    // --- patients
+    const pats = new Map(); const pr = rows('Thông tin Bệnh nhân');
+    if (pr){ const hi = pr.findIndex(r => norm(r[0]) === 'ma bn'); for (const r of pr.slice(hi+1)){ const ma = String(cell(r[0])); const ten = String(cell(r[1])); if (!/^[A-Za-z]+\.\d+$/.test(ma) || !ten) continue; pats.set(ma, {ma, ten, namSinh:parseNS(r[2]), diaChi:String(cell(r[3])), dienThoai:String(cell(r[4])), luuY:String(cell(r[5])), tienSu:String(cell(r[6])), diUng:String(cell(r[7])), lk:[]}); } }
+    // --- old prescriptions (blocks starting with "STT")
+    const visits = []; const vr = rows('Toa thuốc cũ'); const doctors = new Set();
+    if (vr){
+      let cur = null; const flush = () => { if (cur && cur.ngay && (cur.ten || cur.maBN)) visits.push(cur); cur = null; };
+      const LBL = {'ma benh nhan':'maBN','ngay gio':'ngayRaw','bac si':'bacSi','ten':'ten','nam sinh':'namSinh','dia chi':'diaChi','so dien thoai':'dienThoai','dien thoai':'dienThoai','luu y':'luuY','tien su':'tienSu','di ung':'diUng','chan doan':'chanDoan','ghi chu lan kham nay':'ghiChu','tong tien':'tongTien'};
+      for (const r of vr){
+        const a = norm(r[0]);
+        if (a === 'stt'){ flush(); cur = {stt: parseInt(r[1])||0, thuoc:[]}; continue; }
+        if (!cur) continue;
+        const key = LBL[a]; if (key){ const v = r[1]; if (key==='ngayRaw') cur.ngay = parseDay(v); else if (key==='tongTien') cur.tongTien = parseMoney(v); else if (key==='namSinh') cur.namSinh = parseNS(v); else cur[key] = String(cell(v)); }
+        const ten = String(cell(r[4])); if (ten && norm(ten) !== 'ten thuoc'){
+          const sl = parseQty(r[5]); const tien = parseMoney(r[6]); const dg = parseMoney(r[12]) || (sl ? Math.round(tien/sl) : tien);
+          cur.thuoc.push({ten, sl, donGia:dg, tien, tienSua: Math.round(sl*dg) !== tien, cachDung:String(cell(r[7])), buoi:String(cell(r[8])), moiLan:String(cell(r[9])), soNgay:String(cell(r[10])), luuY:String(cell(r[11]))});
+        }
+      }
+      flush();
+      for (const v of visits){
+        v.id = 'im' + fnv((v.maBN||v.ten) + '|' + v.ngay + '|' + v.stt);
+        const lineSum = v.thuoc.reduce((x,l)=>x+(+l.tien||0),0);
+        if (!v.tongTien) v.tongTien = lineSum; else if (v.tongTien > lineSum) v.phuThu = v.tongTien - lineSum;
+        v.trangThai = 'xong'; v.gioDen = ''; if (v.bacSi) doctors.add(v.bacSi);
+        if (v.maBN && !pats.has(v.maBN) && !S.patients.has(v.maBN)) pats.set(v.maBN, {ma:v.maBN, ten:v.ten||'', namSinh:v.namSinh||'', diaChi:v.diaChi||'', dienThoai:v.dienThoai||'', luuY:v.luuY||'', tienSu:v.tienSu||'', diUng:v.diUng||'', lk:[]});
+      }
+    }
+    const bs = rows('Thông tin Bác sĩ');
+    if (bs){ const hi = bs.findIndex(r => norm(r[0]) === 'ma bs'); bs.slice(hi+1).forEach(r => { const n = String(cell(r[1])); if (n && !/nghi/.test(norm(r[4]))) doctors.add(n); }); }
+    const daysSet = new Set(visits.map(v => v.ngay));
+    S.imp = { drugs, pats, visits, doctors:[...doctors], counts:{drugs:drugs.length, patients:pats.size, visits:visits.length, days:daysSet.size, doctors:doctors.size},
+      warn: (!dr && !pr && !vr) ? '' : visits.filter(v=>!v.maBN).length ? `${visits.filter(v=>!v.maBN).length} lượt khám không có mã BN sẽ được nhập nhưng không gắn vào hồ sơ.` : '' };
+    if (!dr && !pr && !vr) S.imp = {error:'Không tìm thấy các trang "Danh mục thuốc", "Thông tin Bệnh nhân", "Toa thuốc cũ" trong file.'};
+  } catch(e){ console.error(e); S.imp = {error:'Không đọc được file này.'}; }
+  $('#impBox').innerHTML = impHTML(); bindImp();
+}
+async function runImport(){
+  const I = S.imp; const doD = $('#impD')?.checked, doP = $('#impP')?.checked, doV = $('#impV')?.checked;
+  const ops = [];
+  if (doD) I.drugs.forEach(t => { const d = Object.assign({}, t); delete d.id; ops.push(() => S.db.collection('thuoc').doc(t.id).set(d)); });
+  if (doV){
+    const lkMap = new Map(); const dayMax = new Map();
+    I.visits.forEach(v => { if (v.maBN){ if (!lkMap.has(v.maBN)) lkMap.set(v.maBN, []); lkMap.get(v.maBN).push(`${v.ngay}/${v.id}`); } dayMax.set(v.ngay, Math.max(dayMax.get(v.ngay)||0, v.stt||0)); });
+    I.lkMap = lkMap;
+    dayMax.forEach((mx, day) => ops.push(async () => { const ref = S.db.doc(`ngay/${day}`); const s = await ref.get(); const last = s.exists ? (+s.data().lastSTT||0) : 0; await ref.set({ngay:day, lastSTT:Math.max(last, mx)}); }));
+    I.visits.forEach(v => { const d = Object.assign({}, v); delete d.id; ops.push(() => S.db.collection(visitPath(v.ngay)).doc(v.id).set(d)); });
+  }
+  if (doP || doV){
+    const mas = new Set([...(doP ? I.pats.keys() : []), ...(doV && I.lkMap ? I.lkMap.keys() : [])]);
+    mas.forEach(ma => ops.push(async () => {
+      const ex = S.patients.get(ma); const base = Object.assign({}, ex || {}, (doP && I.pats.get(ma)) ? I.pats.get(ma) : (!ex ? I.pats.get(ma) : {}));
+      if (!base || !base.ten) return;
+      const lk = [...new Set([...(ex && ex.lk || []), ...((I.lkMap && I.lkMap.get(ma)) || [])])].sort();
+      const p = Object.assign({}, base, {ma, lk, lanCuoi: lk.length ? lk[lk.length-1].slice(0,10) : (base.lanCuoi||'')}); delete p._k;
+      await savePatient(p);
+    }));
+    let mx = 0; mas.forEach(ma => { const m = String(ma).match(/(\d+)$/); if (m) mx = Math.max(mx, +m[1]); });
+    ops.push(async () => { const ref = S.db.doc('meta/dem'); const s = await ref.get(); const last = s.exists ? (+s.data().lastBN||0) : 0; await ref.set({lastBN: Math.max(last, mx, maxPatientNo())}); });
+  }
+  if (I.doctors.length && (doV || doD || doP) && !(S.settings.bacSi||[]).length) ops.push(() => S.db.doc('cauhinh/chung').set(Object.assign({}, S.settings, {bacSi: I.doctors})));
+  if (!ops.length){ toast('Chưa chọn mục nào để nhập.'); return; }
+  const go = $('#impGo'); go.disabled = true; $('#impFile').disabled = true;
+  let i = 0, done = 0, fail = 0, stop = false, lastErr = null; const bar = $('#impProg > div'), msg = $('#impMsg');
+  const worker = async () => { while (!stop && i < ops.length){ const op = ops[i++]; try { await withRetry(op, 5); } catch(e){ fail++; lastErr = e; if (e && ['quota_exceeded','revoked','invalid_argument'].includes(e.code)) stop = true; } done++; if (done % 5 === 0 || done === ops.length){ bar.style.width = (done/ops.length*100).toFixed(1)+'%'; msg.textContent = `Đang nhập ${fmt(done)}/${fmt(ops.length)}…`; } } };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  bar.style.width = '100%';
+  msg.textContent = fail ? `Xong, ${fmt(fail)} mục lỗi. ${errMsg(lastErr)}` : `Đã nhập xong ${fmt(done)} mục.`;
+  S.histCache.clear(); S.tkData = null; $('#impFile').disabled = false;
+  if (!fail) toast('Nhập dữ liệu thành công.');
+}
+
+/* ================= boot ================= */
+function bindHeader(){
+  const sd = $('#selDay'); sd.value = S.day;
+  sd.onchange = () => { if (!sd.value) return; S.day = sd.value; subscribeDay(); renderAll(true); };
+  $('#btnToday').onclick = () => { S.day = todayStr(); sd.value = S.day; subscribeDay(); renderAll(true); };
+}
+async function loadStaff(){
+  const box = $('#nvBox'); if (!box) return; const admin = S.me && S.me.quyen === 'admin';
+  try {
+    const snap = await S.db.collection('nhanvien').get(); const list = snap.docs.map(d => Object.assign({email:d.id}, d.data())).sort((a,b)=>a.email.localeCompare(b.email));
+    if (!$('#nvBox')) return;
+    box.innerHTML = `<table><thead><tr><th>Email</th><th>Họ tên</th><th>Quyền</th><th></th></tr></thead><tbody>${list.map(n => `<tr><td>${esc(n.email)}</td><td>${esc(n.ten||'')}</td><td>${n.quyen==='admin'?'Quản trị':'Nhân viên'}</td><td class="r">${admin && n.email !== S.me.email ? `<button class="btn sm danger" data-rm="${esc(n.email)}">Xóa</button>` : ''}</td></tr>`).join('')}</tbody></table>
+      ${admin ? `<div class="f3" style="grid-template-columns:2fr 1.5fr 1fr auto;margin-top:12px;align-items:end"><div class="field"><label>Email</label><input type="text" id="nvEmail" inputmode="email"></div><div class="field"><label>Họ tên</label><input type="text" id="nvTen"></div><div class="field"><label>Quyền</label><select id="nvQ"><option value="nhanvien">Nhân viên</option><option value="admin">Quản trị</option></select></div><div class="field"><button class="btn primary" id="nvAdd">Thêm</button></div></div><p class="sm" style="margin:0">Người được thêm tự bấm “Tạo tài khoản” ở màn hình đăng nhập bằng đúng email này. Quản trị viên được thêm/xóa nhân viên.</p>` : '<p class="sm">Chỉ quản trị viên được thêm/xóa nhân viên.</p>'}`;
+    $$('#nvBox [data-rm]').forEach(b => b.onclick = async () => { if (!(await confirmBox('Xóa nhân viên?', b.dataset.rm + ' sẽ không dùng được app nữa.', 'Xóa'))) return; try { await S.db.doc('nhanvien/' + b.dataset.rm).delete(); loadStaff(); } catch(e){ toast(errMsg(e)); } });
+    const add = $('#nvAdd'); if (add) add.onclick = async () => { const em = $('#nvEmail').value.trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ toast('Email không hợp lệ.'); return; } try { await S.db.doc('nhanvien/' + em).set({quyen: $('#nvQ').value, ten: $('#nvTen').value.trim(), themLuc: new Date().toISOString()}); toast('Đã thêm ' + em); loadStaff(); } catch(e){ toast(errMsg(e)); } };
+  } catch(e){ const b = $('#nvBox'); if (b) b.innerHTML = '<div class="sm bad">Không tải được danh sách nhân viên.</div>'; }
+}
+function blobDownloader(){ return { save: async ({filename, data}) => { const blob = data instanceof Blob ? data : new Blob([data], {type: /\.html$/.test(filename) ? 'text/html' : 'application/octet-stream'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); return {status:'saved'}; } }; }
+function fbConfigured(){ const c = window.FIREBASE_CONFIG; return !!(c && c.apiKey && !/^YOUR_|^DIEN_/.test(c.apiKey) && window.firebase); }
+function showLogin(msg){ $('#login').classList.add('show'); $('#lgMsg').textContent = msg || ''; }
+function bootFirebase(){
+  firebase.initializeApp(window.FIREBASE_CONFIG);
+  const fs = firebase.firestore();
+  try { fs.settings({ignoreUndefinedProperties:true}); } catch(e){}
+  try { fs.enablePersistence({synchronizeTabs:true}).catch(()=>{}); } catch(e){}
+  const auth = firebase.auth(); S.dl = blobDownloader();
+  const em = () => $('#lgEmail').value.trim().toLowerCase(), pw = () => $('#lgPass').value;
+  const fbErr = e => ({'auth/invalid-credential':'Sai email hoặc mật khẩu.','auth/wrong-password':'Sai mật khẩu.','auth/user-not-found':'Chưa có tài khoản với email này.','auth/email-already-in-use':'Email đã có tài khoản, hãy đăng nhập.','auth/weak-password':'Mật khẩu cần ít nhất 6 ký tự.','auth/invalid-email':'Email không hợp lệ.','auth/too-many-requests':'Thử quá nhiều lần, đợi một lát.','auth/network-request-failed':'Không có mạng.'})[e && e.code] || ('Lỗi: ' + (e && e.code || e));
+  $('#lgGo').onclick = async () => { try { await auth.signInWithEmailAndPassword(em(), pw()); } catch(e){ $('#lgMsg').textContent = fbErr(e); } };
+  $('#lgPass').onkeydown = e => { if (e.key === 'Enter') $('#lgGo').click(); };
+  $('#lgSignup').onclick = async () => { try { const c = await auth.createUserWithEmailAndPassword(em(), pw()); try { await c.user.sendEmailVerification(); } catch(e){} } catch(e){ $('#lgMsg').textContent = fbErr(e); } };
+  $('#lgForgot').onclick = async () => { if (!em()){ $('#lgMsg').textContent = 'Nhập email trước.'; return; } try { await auth.sendPasswordResetEmail(em()); $('#lgMsg').textContent = 'Đã gửi email đặt lại mật khẩu.'; } catch(e){ $('#lgMsg').textContent = fbErr(e); } };
+  $('#btnOut').onclick = async () => { await auth.signOut(); location.reload(); };
+  auth.onAuthStateChanged(async u => {
+    if (!u){ showLogin(); return; }
+    const email = String(u.email||'').toLowerCase();
+    if (!u.emailVerified){
+      showLogin('Đã gửi email xác nhận tới ' + email + '. Mở email, bấm link xác nhận, rồi quay lại bấm “Đăng nhập”. (Không thấy thì xem thư mục Spam.)');
+      $('#btnOut').hidden = false;
+      $('#lgGo').onclick = async () => { try { await u.reload(); if (auth.currentUser.emailVerified){ await auth.currentUser.getIdToken(true); location.reload(); } else { try { await u.sendEmailVerification(); } catch(e){} $('#lgMsg').textContent = 'Email chưa được xác nhận. Đã gửi lại email xác nhận tới ' + email + '.'; } } catch(e){ $('#lgMsg').textContent = fbErr(e); } };
+      return;
+    }
+    try {
+      const me = await fs.doc('nhanvien/' + email).get();
+      if (!me.exists){ showLogin('Tài khoản ' + email + ' chưa được cấp quyền. Nhờ quản trị viên thêm email này ở Cài đặt → Nhân viên, rồi tải lại trang.'); $('#btnOut').hidden = false; return; }
+      S.me = Object.assign({email}, me.data());
+    } catch(e){ showLogin(e && e.code === 'permission-denied' ? 'Tài khoản ' + email + ' chưa được cấp quyền.' : 'Không kiểm tra được quyền (' + (e && e.code) + ').'); $('#btnOut').hidden = false; return; }
+    $('#login').classList.remove('show'); $('#who').textContent = email + (S.me.quyen === 'admin' ? ' · quản trị' : ''); $('#btnOut').hidden = false;
+    if (S.db) return;
+    S.db = { doc: p => fs.doc(p), collection: p => fs.collection(p), _fire: true, _fs: fs };
+    S.mode = 'db'; subscribeStatic(); subscribeDay(); renderAll(true);
+  });
+}
+async function getCap(n){ try { return (window.claude && typeof window.claude.use === 'function') ? await window.claude.use(n) : null; } catch(e){ return null; } }
+async function boot(){
+  bindHeader(); applyRoute();
+  if (fbConfigured()) return bootFirebase();
+  if (!(window.claude && window.claude.use)) await sleep(1500);
+  const [db, dl] = await Promise.all([getCap('db'), getCap('downloads')]);
+  S.dl = dl;
+  if (db){ S.db = db; S.mode = 'db'; }
+  else { S.db = LocalDB(); S.mode = 'local'; S.dayLoaded = true; S.dl = S.dl || blobDownloader(); setBanner(window.FIREBASE_CONFIG ? 'Chưa điền cấu hình Firebase trong config.js — đang chạy chế độ thử, dữ liệu chỉ lưu trên trình duyệt này.' : 'Chế độ thử: dữ liệu chỉ lưu trên trình duyệt này.'); }
+  subscribeStatic(); subscribeDay();
+  renderAll(true);
+}
+boot();
+})();
+</script>
+</body>
+</html>

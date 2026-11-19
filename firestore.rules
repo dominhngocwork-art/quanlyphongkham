@@ -1,0 +1,39 @@
+rules_version = '2';
+// Luật bảo vệ dữ liệu phòng khám.
+// Chỉ tài khoản đã xác nhận email VÀ có tên trong bộ sưu tập "nhanvien" mới đọc/ghi được.
+// Dán toàn bộ nội dung này vào Firebase Console → Firestore Database → Rules → Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function email() {
+      return request.auth.token.email.lower();
+    }
+    function isStaff() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/nhanvien/$(email()));
+    }
+    function isAdmin() {
+      return isStaff()
+        && get(/databases/$(database)/documents/nhanvien/$(email())).data.quyen == 'admin';
+    }
+
+    // Danh sách nhân viên: ai cũng tự đọc được hồ sơ của mình để app kiểm tra quyền;
+    // nhân viên xem được danh sách; chỉ quản trị viên thêm/xóa.
+    match /nhanvien/{em} {
+      allow get: if request.auth != null && request.auth.token.email_verified == true && em == email();
+      allow read: if isStaff();
+      allow write: if isAdmin();
+    }
+
+    // Cài đặt phòng khám, danh mục thuốc, bộ đếm mã BN / số thứ tự
+    match /cauhinh/{id} { allow read, write: if isStaff(); }
+    match /thuoc/{id}   { allow read, write: if isStaff(); }
+    match /meta/{id}    { allow read, write: if isStaff(); }
+    match /ngay/{id}    { allow read, write: if isStaff(); }
+
+    // Hồ sơ bệnh nhân (chia 10 nhóm) và lượt khám theo ngày
+    match /bn/{shard}/ds/{ma}     { allow read, write: if isStaff(); }
+    match /kham/{ngay}/ds/{id}    { allow read, write: if isStaff(); }
+  }
+}
