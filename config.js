@@ -1,12 +1,11 @@
-// Cấu hình Firebase của phòng khám.
-// Lấy ở Firebase Console → Project settings → Your apps → Web app → "SDK setup and configuration" (chọn Config).
+// Cấu hình Firebase của phòng khám (dự án quanlyphongkham-c65c3).
 // Các giá trị này KHÔNG phải mật khẩu: để công khai trên GitHub là bình thường.
 // Dữ liệu được bảo vệ bằng đăng nhập + luật trong file firestore.rules.
 window.FIREBASE_CONFIG = {
-  apiKey: "DIEN_API_KEY_VAO_DAY",
-  authDomain: "ten-du-an.firebaseapp.com",
-  projectId: "ten-du-an",
-  storageBucket: "ten-du-an.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "1:000000000000:web:xxxxxxxxxxxxxxxx"
+  apiKey: "AIzaSyAkA7Ba6b_OzhPsX3e2N7FBj9vRA_C8dDk",
+  authDomain: "quanlyphongkham-c65c3.firebaseapp.com",
+  projectId: "quanlyphongkham-c65c3",
+  storageBucket: "quanlyphongkham-c65c3.firebasestorage.app",
+  messagingSenderId: "1011232755553",
+  appId: "1:1011232755553:web:39423ada0e87cb0ad8ff20"
 };
