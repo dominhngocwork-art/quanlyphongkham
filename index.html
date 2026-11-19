@@ -1316,7 +1316,11 @@ function bootFirebase(){
       return;
     }
     try {
-      const me = await fs.doc('nhanvien/' + email).get();
+      // Lấy token mới để Firebase biết email đã được xác nhận (token cũ có thể còn ghi "chưa xác nhận")
+      try { await u.getIdToken(true); } catch(e){}
+      let me;
+      try { me = await fs.doc('nhanvien/' + email).get({source:'server'}); }
+      catch(e){ if (e && e.code === 'permission-denied'){ await sleep(1500); await u.getIdToken(true); me = await fs.doc('nhanvien/' + email).get({source:'server'}); } else throw e; }
       if (!me.exists){ showLogin('Tài khoản ' + email + ' chưa được cấp quyền. Nhờ quản trị viên thêm email này ở Cài đặt → Nhân viên, rồi tải lại trang.'); $('#btnOut').hidden = false; return; }
       S.me = Object.assign({email}, me.data());
       if (!S._meSub) S._meSub = fs.doc('nhanvien/' + email).onSnapshot(sn => {
